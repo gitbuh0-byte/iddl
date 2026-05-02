@@ -1386,14 +1386,14 @@ export default function App() {
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <ImageIcon className="w-5 h-5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <span className="font-bold text-lg tracking-tight block leading-none">Photo Studio</span>
-              <span className="text-[9px] text-neutral-500 uppercase tracking-widest font-mono">AI-Powered Editor v1.0</span>
+              <span className="font-bold text-base tracking-tight block leading-none">Photo Studio</span>
+              <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-mono">AI-Powered Editor v1.0</span>
             </div>
             {/* OpenCV Status */}
             <div className="ml-4 pl-4 border-l border-neutral-700">
@@ -1410,7 +1410,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-semibold uppercase transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1420,7 +1420,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-semibold uppercase transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
@@ -1623,21 +1623,21 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-neutral-800/60 bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
-          <div className="p-2 lg:p-3 border-b border-neutral-800/40 flex items-center justify-between flex-shrink-0">
-            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Library</span>
-            <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[10px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-b lg:border-b-0 lg:border-r border-neutral-800/60 bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
+          <div className="p-2 border-b border-neutral-800/30 flex items-center justify-between flex-shrink-0">
+            <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-[0.25em]">Library</span>
+            <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[8px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-2 lg:p-3 space-y-2">
+          <div className="flex-1 overflow-y-auto p-2 space-y-2">
             {files.map(file => (
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_16px_-8px_rgba(59,130,246,0.25)]" : "border-neutral-800 hover:border-neutral-700"}`}
+                className={`group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_10px_-6px_rgba(59,130,246,0.2)]" : "border-neutral-700 hover:border-neutral-600"}`}
               >
                 <img src={file.originalUrl} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-neutral-950/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 {file.isAnalyzed && (
                   <div className="absolute top-2 left-2 bg-green-500 text-white p-1 lg:p-1.5 rounded-md shadow-lg flex items-center gap-1">
@@ -1652,8 +1652,8 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 lg:p-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                  <span className="text-[8px] lg:text-[9px] text-white font-bold truncate block">{file.name}</span>
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                  <span className="text-[8px] text-white font-bold truncate block">{file.name}</span>
                 </div>
 
                 <button 
@@ -1668,12 +1668,12 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[4/3] rounded-lg border border-dashed border-neutral-800 flex flex-col items-center justify-center gap-1.5 text-neutral-600 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-[8px] font-bold uppercase tracking-[0.25em]"
+                className="w-full aspect-[4/3] rounded-lg border border-dashed border-neutral-700 flex flex-col items-center justify-center gap-1 text-neutral-500 hover:text-blue-400 hover:border-blue-500/40 hover:bg-blue-500/6 transition-all text-[7px] font-semibold uppercase tracking-[0.3em]"
               >
-                <div className="p-2 bg-neutral-900 rounded-lg">
-                  <Plus className="w-3 h-3" />
+                <div className="p-1.5 bg-neutral-900 rounded-lg">
+                  <Plus className="w-2.5 h-2.5" />
                 </div>
-                <span className="text-[8px] font-bold">Upload</span>
+                <span className="text-[7px] font-semibold">Upload</span>
               </button>
             )}
           </div>
@@ -1682,13 +1682,13 @@ export default function App() {
         </div>
 
         {/* Center: Canvas */}
-        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-4 lg:p-8">
+        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-3 lg:p-5">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#111_0%,_transparent_70%)] pointer-events-none" />
           
           {selectedFile ? (
             <div 
               ref={stageRef}
-              className="relative rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] overflow-hidden bg-neutral-900 border border-neutral-800 w-full max-w-5xl"
+              className="relative rounded-3xl shadow-[0_12px_24px_-12px_rgba(0,0,0,0.45)] overflow-hidden bg-neutral-900 border border-neutral-700/20 w-full max-w-3xl"
             >
               <canvas 
                 ref={canvasRef}
@@ -1784,13 +1784,13 @@ export default function App() {
             </div>
           ) : (
             <div className="text-center space-y-6">
-              <div className="w-24 h-24 bg-neutral-900 border border-neutral-800 rounded-3xl flex items-center justify-center mx-auto relative group">
+              <div className="w-20 h-20 bg-neutral-900 border border-neutral-800 rounded-3xl flex items-center justify-center mx-auto relative group">
                 <div className="absolute inset-0 bg-blue-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-all rounded-full" />
-                <ImageIcon className="w-10 h-10 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
+                <ImageIcon className="w-8 h-8 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white tracking-tight">Upload Your Photo</h3>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] font-medium max-w-xs mx-auto leading-relaxed">
+                <h3 className="text-lg font-bold text-white tracking-tight">Upload Your Photo</h3>
+                <p className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] font-medium max-w-xs mx-auto leading-relaxed">
                   AI will automatically detect faces, text, signatures, codes, and backgrounds.
                 </p>
               </div>
@@ -1799,11 +1799,11 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-neutral-800/40 bg-[var(--surface)] p-3 lg:p-4 space-y-4 lg:space-y-5 shrink-0 overflow-y-auto max-h-[40vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/40 bg-[var(--surface)] p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
-            <div className="space-y-3 lg:space-y-4">
-              <h4 className="text-[9px] lg:text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
+            <div className="space-y-2.5">
+              <h4 className="text-[8px] font-bold text-neutral-500 uppercase tracking-[0.25em]">Adjustments</h4>
               
               <div className="space-y-2 lg:space-y-3">
                 <div>
@@ -2416,15 +2416,15 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-3 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-3">
-            <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
-              <CreditCard className="w-3.5 h-3.5" />
+          <div className="p-2.5 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2.5">
+            <h4 className="text-[9px] font-bold text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5">
+              <CreditCard className="w-3 h-3" />
               DL Number Generator
             </h4>
             
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               <div>
-                <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">State</label>
+                <label className="text-[8px] font-bold text-neutral-500 uppercase mb-1.5 block">State</label>
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
@@ -2440,7 +2440,7 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
+                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
               >
                 <RefreshCw className="w-3 h-3" />
                 Generate
@@ -2452,7 +2452,7 @@ export default function App() {
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
-                      className="p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
+                      className="p-1.5 rounded-lg bg-neutral-800/50 border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
                     >
                       {/* DL Number */}
                       <div className="flex items-center justify-between gap-2">
