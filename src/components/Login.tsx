@@ -84,7 +84,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       />
 
       {/* Main content */}
-      <div className="relative z-10 w-full max-w-md">
+      <div className="relative z-10 w-full max-w-sm">
         <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -95,7 +95,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/50 via-blue-500/50 to-purple-500/50 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           
           {/* Glassmorphic card */}
-          <div className="relative backdrop-blur-2xl bg-white/5 border border-white/20 rounded-2xl p-8 shadow-2xl">
+          <div className="relative backdrop-blur-2xl bg-white/5 border border-white/20 rounded-2xl p-6 shadow-2xl">
             {/* Decorative elements */}
             <div className="absolute top-0 right-0 w-1 h-1/3 bg-gradient-to-b from-purple-500 to-transparent" />
             <div className="absolute bottom-0 left-0 w-1/3 h-1 bg-gradient-to-r from-blue-500 to-transparent" />

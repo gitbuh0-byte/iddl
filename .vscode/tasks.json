@@ -1,0 +1,101 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Git Status Check",
+			"type": "shell",
+			"command": "git status --short",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push",
+			"type": "shell",
+			"command": "git add src/App.tsx && git commit -m \"Fix App.tsx JSX parsing issue and validate build\" && git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m \"Fix App.tsx JSX parsing issue and validate build\"; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push 2",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m \"Fix App.tsx JSX parsing issue and validate build\"; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push 3",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m Fix_App_tsx_JSX_parsing_issue_and_validate_build; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build After Header Update",
+			"type": "shell",
+			"command": "npm run build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Status for Push",
+			"type": "shell",
+			"command": "git status --short",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push Header Update",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m \"Compact header toolbar and move overlay crop to layer panel\"; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push Header Update 2",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m 'Compact header toolbar and move overlay crop to layer panel'; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Build After Overlay Edit",
+			"type": "shell",
+			"command": "npm run build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Status Before Push",
+			"type": "shell",
+			"command": "git status --short",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Git Commit and Push Overlay Update",
+			"type": "shell",
+			"command": "git add src/App.tsx; git commit -m 'Add overlay click selection and resize handles'; git push origin main",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}
