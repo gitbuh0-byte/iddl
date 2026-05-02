@@ -1495,7 +1495,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={copyLayer}
-                      disabled={!selectedLayer}
+                      disabled={!selectedLayer && !selectedBaseImage}
                       className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -1504,7 +1504,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={cutLayer}
-                      disabled={!selectedLayer}
+                      disabled={!selectedLayer && !selectedBaseImage}
                       className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -1831,6 +1831,96 @@ export default function App() {
                     className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Base Image Controls */}
+          {selectedBaseImage && selectedFile && !selectedLayer && (
+            <div className="space-y-4 p-4 rounded-2xl bg-neutral-900/30 border border-neutral-800">
+              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Base Image Edit</h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop X</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={selectedFile.crop?.x ?? 0}
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
+                      f.id === selectedFileId
+                        ? { ...f, crop: { ...f.crop, x: Number(e.target.value) } }
+                        : f
+                    ))}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                  <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.x ?? 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Y</label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={selectedFile.crop?.y ?? 0}
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
+                      f.id === selectedFileId
+                        ? { ...f, crop: { ...f.crop, y: Number(e.target.value) } }
+                        : f
+                    ))}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                  <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.y ?? 0) * 100).toFixed(0)}%</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Width</label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.width ?? 1}
+                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
+                        f.id === selectedFileId
+                          ? { ...f, crop: { ...f.crop, width: Number(e.target.value) } }
+                          : f
+                      ))}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.width ?? 1) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Height</label>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.height ?? 1}
+                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
+                        f.id === selectedFileId
+                          ? { ...f, crop: { ...f.crop, height: Number(e.target.value) } }
+                          : f
+                      ))}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.height ?? 1) * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateFilesWithHistory(prev => prev.map(f =>
+                    f.id === selectedFileId
+                      ? { ...f, crop: { x: 0, y: 0, width: 1, height: 1 } }
+                      : f
+                  ))}
+                  className="w-full py-2 rounded-xl bg-blue-600/15 border border-blue-500 text-[10px] font-bold uppercase text-blue-200 hover:bg-blue-600/25"
+                >
+                  Reset Base Crop
+                </button>
               </div>
             </div>
           )}
