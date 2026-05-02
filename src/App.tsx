@@ -1405,21 +1405,21 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-[var(--surface-strong)] border border-neutral-700/30 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-[var(--surface-hover)]"
+              className="grid place-items-center w-9 h-9 rounded-md border border-neutral-700/40 bg-[var(--bg-secondary)] text-neutral-200 transition hover:bg-[var(--surface-strong)]"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
-              {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
-              <span>{viewMode === "editor" ? "Preview" : "Editor"}</span>
+              {viewMode === "editor" ? <Eye className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+              <span className="sr-only">{viewMode === "editor" ? "Preview" : "Editor"}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-[var(--surface-strong)] border border-neutral-700/30 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-[var(--surface-hover)]"
+              className="grid place-items-center w-9 h-9 rounded-md border border-neutral-700/40 bg-[var(--bg-secondary)] text-neutral-200 transition hover:bg-[var(--surface-strong)]"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
-              <span>{theme === "dark" ? "Light" : "Dark"}</span>
+              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              <span className="sr-only">{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
 
             <div className="flex items-center gap-0.5 bg-[var(--bg-secondary)] rounded-full p-0.5 border border-neutral-800/40">
@@ -1595,10 +1595,10 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="p-1 rounded-full bg-red-600/15 text-red-300 border border-red-500/20 hover:bg-red-600/25 hover:text-red-100 transition"
+              className="grid place-items-center w-9 h-9 rounded-md border border-red-500/20 bg-[var(--bg-secondary)] text-red-300 hover:bg-red-600/10 hover:text-red-100 transition"
               title="Logout"
             >
-              <LogOut className="w-3 h-3" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -1931,11 +1931,10 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-3">
-            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center justify-between">
-              Detected Layers
-              <span className="text-[7px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
+            <h4 className="text-[10px] font-semibold text-neutral-200 flex items-center justify-between">
+              <span>Detected Layers</span>
+              <span className="text-[8px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
-            
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
               {selectedFile?.layers.length === 0 ? (
                 <div className="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-dashed border-neutral-700/50 flex flex-col items-center justify-center text-center">
@@ -1948,10 +1947,10 @@ export default function App() {
                   <div 
                     key={layer.id}
                     onClick={() => setSelectedLayerId(layer.id)}
-                    className={`group flex items-center gap-2 p-2 rounded-xl transition-all border cursor-pointer ${
+                    className={`group flex items-center gap-2 p-2 rounded-md transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
-                        ? "bg-neutral-800 border-neutral-700" 
-                        : "bg-[var(--surface-strong)] border border-neutral-800/30 hover:border-neutral-600/40"
+                        ? "bg-[var(--bg-secondary)] border-neutral-700/40" 
+                        : "bg-[var(--bg-secondary)] border border-neutral-700/30 hover:border-neutral-600/40"
                     }`}
                   >
                     <div className={`p-1.5 rounded-lg flex-shrink-0 ${
@@ -1976,8 +1975,8 @@ export default function App() {
                       }[layer.type]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[9px] font-semibold text-neutral-200 truncate block">{layer.name}</span>
-                      <span className="text-[7px] text-neutral-500 font-mono">
+                      <span className="text-[10px] font-medium text-neutral-200 truncate block">{layer.name}</span>
+                      <span className="text-[8px] text-neutral-500 font-sans">
                         {(layer.x * 100).toFixed(0)}%, {(layer.y * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -2400,19 +2399,21 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-2 rounded-xl bg-[var(--bg-secondary)] border border-neutral-700/50 space-y-2 overflow-visible">
-            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-1.5">
-              <CreditCard className="w-3 h-3" />
-              DL Number Generator
-            </h4>
+          <div className="p-3 rounded-md bg-[var(--bg-secondary)] border border-neutral-700/40 space-y-3 overflow-visible">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-4 h-4 text-neutral-200" />
+                <span className="text-[9px] font-semibold text-neutral-200">DL Number Generator</span>
+              </div>
+            </div>
             
             <div className="space-y-2">
               <div>
-                <label className="text-[7px] font-semibold text-neutral-500 uppercase mb-1 block">State</label>
+                <label className="text-[8px] font-medium text-neutral-400 mb-1 block">State</label>
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="relative z-30 w-full px-2 py-1 rounded-lg bg-[var(--surface-strong)] border border-neutral-700 text-[8px] font-semibold tracking-tight text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
+                  className="appearance-none relative z-30 w-full px-2 py-1.5 rounded-md bg-[var(--bg-secondary)] border border-neutral-700/40 text-[9px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
@@ -2424,19 +2425,19 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[7px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
+                className="w-full inline-flex items-center justify-center gap-2 py-1.5 rounded-md text-[9px] font-semibold uppercase transition-all border border-blue-500/20 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
               >
                 <RefreshCw className="w-3 h-3" />
                 Generate
               </button>
 
               {generatedDLPackages.length > 0 && (
-                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-                  <p className="text-[7px] text-neutral-600 uppercase font-bold">Generated Packages:</p>
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto border border-neutral-700/40 rounded-md bg-[var(--bg-secondary)] p-2">
+                  <p className="text-[8px] text-neutral-500 font-semibold">Generated packages</p>
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
-                      className="p-1.5 rounded-lg bg-[var(--surface-strong)] border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
+                      className="p-2 rounded-md bg-[var(--bg-secondary)] border border-neutral-700/50 hover:border-neutral-600 transition-all space-y-2"
                     >
                       {/* DL Number */}
                       <div className="flex items-center justify-between gap-2">
