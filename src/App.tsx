@@ -66,7 +66,7 @@ export default function App() {
   const [files, setFiles] = useState<ManagedFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState<"add" | "edit" | null>(null);
+  const [editMode, setEditMode] = useState<"add" | "edit" | "select" | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [exportFormat, setExportFormat] = useState<"png" | "jpg" | "psd" | null>(null);
   
@@ -171,9 +171,10 @@ export default function App() {
   };
 
   const getResizeHandleAtPoint = (layer: Layer, x: number, y: number) => {
+    // Support resizing for image, text, and signature layers
     const rect = getLayerDisplayRect(layer);
     if (!rect) return null;
-    const handleSize = 12;
+    const handleSize = 14;
     const corners = {
       nw: { x: rect.x, y: rect.y },
       ne: { x: rect.x + rect.width, y: rect.y },
@@ -731,11 +732,28 @@ export default function App() {
             ctx.restore();
 
             if (selectedLayer?.id === layer.id) {
-              ctx.strokeStyle = "rgba(255,255,255,0.8)";
+              ctx.strokeStyle = "rgba(0, 217, 255, 0.8)";
               ctx.lineWidth = 2;
               ctx.setLineDash([5, 5]);
               ctx.strokeRect(x, y, w, h);
               ctx.setLineDash([]);
+              
+              // Draw resize handles
+              const handleSize = 7;
+              const handles = [
+                { x: x - handleSize, y: y - handleSize }, // nw
+                { x: x + w - handleSize, y: y - handleSize }, // ne
+                { x: x - handleSize, y: y + h - handleSize }, // sw
+                { x: x + w - handleSize, y: y + h - handleSize }, // se
+              ];
+              
+              ctx.fillStyle = "rgba(0, 217, 255, 0.9)";
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = 1;
+              handles.forEach(handle => {
+                ctx.fillRect(handle.x, handle.y, handleSize * 2, handleSize * 2);
+                ctx.strokeRect(handle.x, handle.y, handleSize * 2, handleSize * 2);
+              });
             }
 
             return;
@@ -880,7 +898,8 @@ export default function App() {
         setSelectedLayerId(clickedLayer.id);
       }
 
-      if (!clickedLayer.locked && clickedLayer.type === "image") {
+      // Allow resizing for image, text, and signature layers
+      if (!clickedLayer.locked && (clickedLayer.type === "image" || clickedLayer.type === "text" || clickedLayer.type === "signature")) {
         const handle = getResizeHandleAtPoint(clickedLayer, x * canvasLayout.width, y * canvasLayout.height);
         if (handle) {
           const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
