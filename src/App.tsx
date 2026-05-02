@@ -1620,7 +1620,12 @@ export default function App() {
                 onClick={() => setSelectedFileId(file.id)}
                 className={`group relative aspect-[4/3] min-h-[112px] rounded-2xl overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 ring-1 ring-blue-500/20" : "border-neutral-700 hover:border-neutral-600"}`}
               >
-                <img src={file.originalUrl} draggable={false} className="block w-full h-full object-cover pointer-events-none" />
+                <img
+                  src={file.originalUrl}
+                  draggable={false}
+                  className="block w-full h-full object-cover pointer-events-none select-none"
+                  style={{ userSelect: "none", WebkitUserDrag: "none", MozUserSelect: "none", msUserSelect: "none" }}
+                />
                 <div className="absolute inset-0 bg-neutral-950/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 {file.isAnalyzed && (
