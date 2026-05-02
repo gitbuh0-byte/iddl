@@ -865,6 +865,8 @@ export default function App() {
   }, [selectedFile]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     if (!canvasRef.current || !selectedFile) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
@@ -927,6 +929,7 @@ export default function App() {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
     if (!isDragging || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
@@ -1673,6 +1676,8 @@ export default function App() {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                draggable={false}
+                style={{ touchAction: "none", WebkitUserDrag: "none" }}
                 className={`w-full block h-auto ${editMode ? "cursor-crosshair" : "cursor-default"}`}
               />
               {selectedLayer?.type === "image" && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
