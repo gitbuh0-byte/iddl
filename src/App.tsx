@@ -23,7 +23,7 @@ interface DetectionResult {
 interface Layer {
   id: string;
   name: string;
-  type: "face" | "text" | "signature" | "code" | "background" | "custom";
+  type: "face" | "text" | "signature" | "code" | "background" | "custom" | "image";
   x: number;
   y: number;
   width: number;
@@ -32,6 +32,14 @@ interface Layer {
   visible: boolean;
   locked: boolean;
   opacity: number;
+  text?: string;
+  textColor?: string;
+  fontFamily?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  fontStyle?: "normal" | "italic" | "bold" | "bolder";
+  imageSrc?: string;
+  crop?: { x: number; y: number; width: number; height: number };
 }
 
 interface ManagedFile {
@@ -83,6 +91,8 @@ export default function App() {
 
   const selectedFile = files.find(f => f.id === selectedFileId);
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
+  const overlayInputRef = useRef<HTMLInputElement>(null);
+  const [clipboardLayer, setClipboardLayer] = useState<Layer | null>(null);
 
   type HistorySnapshot = {
     files: ManagedFile[];
@@ -154,6 +164,110 @@ export default function App() {
     pushSnapshot();
     clearRedoStack();
     setFiles(updater);
+  };
+
+  const addTextLayer = (text = "New Text") => {
+    if (!selectedFileId) return;
+    const newLayer: Layer = {
+      id: `text-${Date.now()}`,
+      name: "Text Layer",
+      type: "text",
+      x: 0.1,
+      y: 0.1,
+      width: 0.35,
+      height: 0.15,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      text,
+      textColor: "#ffffff",
+      fontFamily: "Inter",
+      fontSize: 32,
+      fontWeight: "bold",
+      fontStyle: "normal",
+    };
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((f) =>
+      f.id === selectedFileId
+        ? { ...f, layers: [...f.layers, newLayer] }
+        : f
+    ));
+    setSelectedLayerId(newLayer.id);
+  };
+
+  const createImageLayer = (src: string) => {
+    if (!selectedFileId) return;
+    const newLayer: Layer = {
+      id: `image-${Date.now()}`,
+      name: "Overlay Image",
+      type: "image",
+      x: 0.1,
+      y: 0.1,
+      width: 0.4,
+      height: 0.4,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      imageSrc: src,
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+    };
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((f) =>
+      f.id === selectedFileId
+        ? { ...f, layers: [...f.layers, newLayer] }
+        : f
+    ));
+    setSelectedLayerId(newLayer.id);
+  };
+
+  const handleOverlaySelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    createImageLayer(url);
+    e.target.value = "";
+  };
+
+  const copyLayer = () => {
+    if (!selectedLayer) return;
+    setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
+  };
+
+  const cutLayer = () => {
+    if (!selectedLayer || !selectedFile) return;
+    setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((f) =>
+      f.id === selectedFileId
+        ? { ...f, layers: f.layers.filter((layer) => layer.id !== selectedLayer.id) }
+        : f
+    ));
+    setSelectedLayerId(null);
+  };
+
+  const pasteLayer = () => {
+    if (!clipboardLayer || !selectedFileId) return;
+    const pastedLayer = {
+      ...JSON.parse(JSON.stringify(clipboardLayer)),
+      id: `${clipboardLayer.id}-${Date.now()}`,
+      x: Math.min(0.85, (clipboardLayer.x || 0) + 0.05),
+      y: Math.min(0.85, (clipboardLayer.y || 0) + 0.05),
+      name: `${clipboardLayer.name} Copy`,
+    } as Layer;
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((f) =>
+      f.id === selectedFileId
+        ? { ...f, layers: [...f.layers, pastedLayer] }
+        : f
+    ));
+    setSelectedLayerId(pastedLayer.id);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -344,6 +458,58 @@ export default function App() {
           const w = layer.width * canvas.width;
           const h = layer.height * canvas.height;
 
+          if (layer.type === "image" && layer.imageSrc) {
+            const overlay = new Image();
+            overlay.crossOrigin = "anonymous";
+            overlay.src = layer.imageSrc;
+            overlay.onload = () => {
+              const crop = layer.crop || { x: 0, y: 0, width: 1, height: 1 };
+              const sx = crop.x * overlay.width;
+              const sy = crop.y * overlay.height;
+              const sw = crop.width * overlay.width;
+              const sh = crop.height * overlay.height;
+
+              ctx.save();
+              ctx.globalAlpha = layer.opacity;
+              ctx.drawImage(overlay, sx, sy, sw, sh, x, y, w, h);
+              ctx.restore();
+            };
+            return;
+          }
+
+          if ((layer.type === "text" || layer.type === "signature") && layer.text) {
+            const fontFamily = layer.fontFamily || (layer.type === "signature" ? "Great Vibes" : "Inter");
+            const fontSize = layer.fontSize || (layer.type === "signature" ? 38 : 28);
+            const fontWeight = layer.fontWeight || "bold";
+            const fontStyle = layer.fontStyle || "normal";
+            const textColor = layer.textColor || "#ffffff";
+            const text = layer.text;
+
+            ctx.save();
+            ctx.globalAlpha = layer.opacity;
+            ctx.fillStyle = textColor;
+            ctx.strokeStyle = "rgba(0,0,0,0.25)";
+            ctx.lineWidth = 2;
+            ctx.font = `${fontStyle} ${fontWeight} ${fontSize}px ${fontFamily}`;
+            ctx.textBaseline = "top";
+            ctx.textAlign = "left";
+            const textX = x + 10;
+            const textY = y + 10;
+            ctx.strokeText(text, textX, textY);
+            ctx.fillText(text, textX, textY);
+            ctx.restore();
+
+            if (selectedLayer?.id === layer.id) {
+              ctx.strokeStyle = "rgba(255,255,255,0.8)";
+              ctx.lineWidth = 2;
+              ctx.setLineDash([5, 5]);
+              ctx.strokeRect(x, y, w, h);
+              ctx.setLineDash([]);
+            }
+
+            return;
+          }
+
           ctx.globalAlpha = layer.opacity;
           const colors = {
             face: { fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6" },
@@ -354,7 +520,7 @@ export default function App() {
             custom: { fill: "rgba(107, 114, 128, 0.3)", stroke: "#6b7280" },
           };
 
-          const color = colors[layer.type as keyof typeof colors];
+          const color = colors[layer.type as keyof typeof colors] || colors.custom;
           ctx.fillStyle = color.fill;
           ctx.strokeStyle = color.stroke;
           ctx.lineWidth = selectedLayer?.id === layer.id ? 3 : 2;
@@ -741,8 +907,9 @@ export default function App() {
                     code: "rgba(34, 197, 94, 0.6)",
                     background: "rgba(234, 179, 8, 0.6)",
                     custom: "rgba(107, 114, 128, 0.6)",
+                    image: "rgba(102, 204, 255, 0.6)",
                   };
-                  lctx.fillStyle = colors[layer.type] || colors.custom;
+                  lctx.fillStyle = colors[layer.type as keyof typeof colors] || colors.custom;
                   lctx.fillRect(
                     layer.x * originalImg.width,
                     layer.y * originalImg.height,
@@ -1161,6 +1328,7 @@ export default function App() {
                         code: "bg-green-500/10 text-green-500",
                         background: "bg-yellow-500/10 text-yellow-500",
                         custom: "bg-gray-500/10 text-gray-500",
+                        image: "bg-cyan-500/10 text-cyan-500",
                       }[layer.type]
                     }`}>
                       {{
@@ -1170,6 +1338,7 @@ export default function App() {
                         code: <Code className="w-4 h-4" />,
                         background: <ImageIcon className="w-4 h-4" />,
                         custom: <Square className="w-4 h-4" />,
+                        image: <ImageIcon className="w-4 h-4" />,
                       }[layer.type]}
                     </div>
                     <div className="flex-1 min-w-0">

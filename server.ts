@@ -278,13 +278,12 @@ async function detectText(imagePath: string, imgWidth: number, imgHeight: number
     const image = await Jimp.read(imagePath);
     
     // Enhance image for better text recognition
-    // Increase contrast and sharpen
+    // Increase contrast
     image.contrast(0.5); // Enhance contrast
-    image.sharpen({ x: 2, y: 2 }); // Sharpen edges
     
     // Create temporary enhanced image
-    const enhancedPath = imagePath + ".enhanced.png";
-    await image.write(enhancedPath);
+    const enhancedPath = `${imagePath}.enhanced.png`;
+    await image.write(enhancedPath as `${string}.${string}`);
     
     // Run Tesseract OCR on enhanced image
     const result = await Tesseract.recognize(enhancedPath, "eng");
@@ -348,7 +347,6 @@ async function analyzeImage(imagePath: string): Promise<DetectionResult> {
       data: imageData,
       width: imgWidth,
       height: imgHeight,
-      channels: 4
     });
 
     // Run COCO-SSD object detection
