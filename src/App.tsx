@@ -4,53 +4,213 @@ import { writePsd, Psd } from "ag-psd";
 import { 
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
-  Square, MousePointer2, Eraser, Save, Plus
+  Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2
 } from "lucide-react";
+import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
+import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
+
+interface DetectionResult {
+  faces: Array<{ x: number; y: number; width: number; height: number; confidence: number }>;
+  text: Array<{ x: number; y: number; width: number; height: number; content: string }>;
+  signatures: Array<{ x: number; y: number; width: number; height: number }>;
+  codes: Array<{ x: number; y: number; width: number; height: number; type: string }>;
+  backgrounds: Array<{ type: string; color: string }>;
+  components: string[];
+}
+
+interface Layer {
+  id: string;
+  name: string;
+  type: "face" | "text" | "signature" | "code" | "background" | "custom";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  confidence?: number;
+  visible: boolean;
+  locked: boolean;
+  opacity: number;
+}
 
 interface ManagedFile {
   id: string;
   name: string;
   originalUrl: string;
-  masks: Array<{ type: "portrait" | "text", x: number, y: number, width: number, height: number }>;
+  layers: Layer[];
+  analysis: DetectionResult | null;
+  isAnalyzing: boolean;
+  isAnalyzed: boolean;
   isProcessing: boolean;
   isCompleted: boolean;
+  adjustments: {
+    brightness: number;
+    contrast: number;
+    saturation: number;
+  };
 }
 
 export default function App() {
   const [files, setFiles] = useState<ManagedFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState<"portrait" | "text" | null>(null);
+  const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState<"add" | "edit" | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportFormat, setExportFormat] = useState<"png" | "jpg" | "psd" | null>(null);
   
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [currentDrag, setCurrentDrag] = useState<{ x: number, y: number } | null>(null);
+  const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
+
+  // Text removal state
+  const [isRemovingText, setIsRemovingText] = useState(false);
+  const [selectedTextsToRemove, setSelectedTextsToRemove] = useState<string[]>([]);
+  const [isInpainting, setIsInpainting] = useState(false);
+  const [openCVLoaded, setOpenCVLoaded] = useState(false);
+
+  // DL Generator state
+  const [selectedDLState, setSelectedDLState] = useState<StateCode>("CA");
+  const [generatedDLPackages, setGeneratedDLPackages] = useState<DLPackage[]>([]);
+  const [dlCopiedIndex, setDlCopiedIndex] = useState<{ index: number; field: "dlNumber" | "icn" | "dd" } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const selectedFile = files.find(f => f.id === selectedFileId);
+  const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
 
-    const newFiles: ManagedFile[] = selectedFiles.slice(0, 4 - files.length).map(f => ({
-      id: Math.random().toString(36).substring(2, 9),
-      name: f.name,
-      originalUrl: URL.createObjectURL(f),
-      masks: [],
-      isProcessing: false,
-      isCompleted: false,
-    }));
+    selectedFiles.slice(0, 4 - files.length).forEach(f => {
+      const id = Math.random().toString(36).substring(2, 9);
+      const newFile: ManagedFile = {
+        id,
+        name: f.name,
+        originalUrl: URL.createObjectURL(f),
+        layers: [],
+        analysis: null,
+        isAnalyzing: true,
+        isAnalyzed: false,
+        isProcessing: false,
+        isCompleted: false,
+        adjustments: { brightness: 0, contrast: 0, saturation: 0 }
+      };
+      
+      setFiles(prev => [...prev, newFile]);
+      if (!selectedFileId) setSelectedFileId(id);
 
-    setFiles(prev => [...prev, ...newFiles]);
-    if (!selectedFileId && newFiles.length > 0) {
-      setSelectedFileId(newFiles[0].id);
-    }
+      // Auto-analyze image
+      analyzeImage(f, id);
+    });
     
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const analyzeImage = async (file: File, fileId: string) => {
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.analysis) {
+        const analysis = data.analysis as DetectionResult;
+        
+        // Convert percentage-based coordinates to normalized 0-1 range
+        const layers: Layer[] = [];
+        let layerId = 0;
+
+        // Add face layers
+        analysis.faces.forEach((face) => {
+          layers.push({
+            id: `face-${layerId++}`,
+            name: `Face ${layerId}`,
+            type: "face",
+            x: face.x / 100,
+            y: face.y / 100,
+            width: face.width / 100,
+            height: face.height / 100,
+            confidence: face.confidence,
+            visible: true,
+            locked: false,
+            opacity: 1,
+          });
+        });
+
+        // Add text layers
+        analysis.text.forEach((txt) => {
+          layers.push({
+            id: `text-${layerId++}`,
+            name: `Text: "${txt.content.substring(0, 20)}"`,
+            type: "text",
+            x: txt.x / 100,
+            y: txt.y / 100,
+            width: txt.width / 100,
+            height: txt.height / 100,
+            visible: true,
+            locked: false,
+            opacity: 1,
+          });
+        });
+
+        // Add signature layers
+        analysis.signatures.forEach((sig) => {
+          layers.push({
+            id: `sig-${layerId++}`,
+            name: `Signature ${layerId}`,
+            type: "signature",
+            x: sig.x / 100,
+            y: sig.y / 100,
+            width: sig.width / 100,
+            height: sig.height / 100,
+            visible: true,
+            locked: false,
+            opacity: 1,
+          });
+        });
+
+        // Add code layers
+        analysis.codes.forEach((code) => {
+          layers.push({
+            id: `code-${layerId++}`,
+            name: `${code.type.toUpperCase()} Code`,
+            type: "code",
+            x: code.x / 100,
+            y: code.y / 100,
+            width: code.width / 100,
+            height: code.height / 100,
+            visible: true,
+            locked: false,
+            opacity: 1,
+          });
+        });
+
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, layers, analysis, isAnalyzing: false, isAnalyzed: true, isCompleted: true }
+            : f
+        ));
+
+        if (!selectedLayerId && layers.length > 0) {
+          setSelectedLayerId(layers[0].id);
+        }
+      }
+    } catch (error) {
+      console.error("Analysis error:", error);
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, isAnalyzing: false, isAnalyzed: false }
+          : f
+      ));
+    }
   };
 
   const removeFile = (id: string) => {
@@ -58,136 +218,126 @@ export default function App() {
     if (selectedFileId === id) setSelectedFileId(null);
   };
 
-  const resetFile = (id: string) => {
-    setFiles(prev => prev.map(f => f.id === id ? { ...f, masks: [], isCompleted: false, isProcessing: false } : f));
-  };
-
-  // Canvas drawing logic for masks and final result
+  // Canvas drawing logic
   useEffect(() => {
     if (!selectedFile || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = selectedFile.originalUrl;
-    img.onload = () => {
-      const container = stageRef.current;
-      if (!container) return;
+    // Redraw canvas whenever selected file or its layers change
+    const drawCanvas = () => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = selectedFile.originalUrl;
       
-      const ratio = img.width / img.height;
-      const targetWidth = Math.min(container.clientWidth, 900);
-      canvas.width = targetWidth;
-      canvas.height = targetWidth / ratio;
+      img.onload = () => {
+        const container = stageRef.current;
+        if (!container) return;
+        
+        const ratio = img.width / img.height;
+        const targetWidth = Math.min(container.clientWidth, 900);
+        canvas.width = targetWidth;
+        canvas.height = targetWidth / ratio;
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Apply adjustments
+        ctx.filter = `brightness(${1 + selectedFile.adjustments.brightness * 0.1}) contrast(${1 + selectedFile.adjustments.contrast * 0.1}) saturate(${1 + selectedFile.adjustments.saturation * 0.1})`;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.filter = "none";
 
-      if (selectedFile.isCompleted) {
-        // Advanced Deletion: Background Analysis & Synthesis
-        selectedFile.masks.forEach(mask => {
-          const mx = mask.x * canvas.width;
-          const my = mask.y * canvas.height;
-          const mw = mask.width * canvas.width;
-          const mh = mask.height * canvas.height;
+        // Draw layers
+        selectedFile.layers.forEach(layer => {
+          if (!layer.visible) return;
 
-          // 1. Sample the perimeter (4 sides) to determine average context colors
-          const getAvgColor = (x: number, y: number, w: number, h: number) => {
-            try {
-              const data = ctx.getImageData(Math.max(0, x), Math.max(0, y), Math.min(w, canvas.width - x), Math.min(h, canvas.height - y)).data;
-              let r = 0, g = 0, b = 0, count = 0;
-              for (let i = 0; i < data.length; i += 4) {
-                r += data[i]; g += data[i+1]; b += data[i+2]; count++;
-              }
-              return count > 0 ? [r/count, g/count, b/count] : [200, 200, 200];
-            } catch (e) { return [200, 200, 200]; }
+          const x = layer.x * canvas.width;
+          const y = layer.y * canvas.height;
+          const w = layer.width * canvas.width;
+          const h = layer.height * canvas.height;
+
+          ctx.globalAlpha = layer.opacity;
+          const colors = {
+            face: { fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6" },
+            text: { fill: "rgba(239, 68, 68, 0.3)", stroke: "#ef4444" },
+            signature: { fill: "rgba(168, 85, 247, 0.3)", stroke: "#a855f7" },
+            code: { fill: "rgba(34, 197, 94, 0.3)", stroke: "#22c55e" },
+            background: { fill: "rgba(234, 179, 8, 0.3)", stroke: "#eab308" },
+            custom: { fill: "rgba(107, 114, 128, 0.3)", stroke: "#6b7280" },
           };
 
-          const margin = 12;
-          const cT = getAvgColor(mx, my - margin, mw, margin);
-          const cB = getAvgColor(mx, my + mh, mw, margin);
-          const cL = getAvgColor(mx - margin, my, margin, mh);
-          const cR = getAvgColor(mx + mw, my, margin, mh);
-
-          // 2. Synthesize a smooth gradient background
-          const grad = ctx.createLinearGradient(mx, my, mx + mw, my + mh);
-          grad.addColorStop(0, `rgb(${cT[0]}, ${cT[1]}, ${cT[2]})`);
-          grad.addColorStop(0.5, `rgb(${cL[0]}, ${cL[1]}, ${cL[2]})`);
-          grad.addColorStop(1, `rgb(${cB[0]}, ${cB[1]}, ${cB[2]})`);
-          
-          ctx.fillStyle = grad;
-          ctx.fillRect(mx, my, mw, mh);
-
-          // 3. Texture Synthesis: Sample a clean patch from the document corner (usually minimalist)
-          // We sample from the bottom right corner which often has the base pattern
-          try {
-            const cornerX = canvas.width - 60;
-            const cornerY = canvas.height - 60;
-            ctx.globalAlpha = 0.2; // Low opacity to blend texture over gradient
-            ctx.drawImage(img, (cornerX / canvas.width) * img.width, (cornerY / canvas.height) * img.height, 50, 50, mx, my, mw, mh);
-            ctx.globalAlpha = 1.0;
-          } catch (e) { /* ignore */ }
-
-          // 4. Noise Grain matching
-          const grain = ctx.getImageData(mx, my, mw, mh);
-          for (let i = 0; i < grain.data.length; i += 4) {
-            const noise = (Math.random() - 0.5) * 6;
-            grain.data[i] += noise;
-            grain.data[i+1] += noise;
-            grain.data[i+2] += noise;
-          }
-          ctx.putImageData(grain, mx, my);
-
-          // 5. Soft border blending
-          ctx.save();
-          ctx.globalCompositeOperation = "destination-out";
-          const feather = ctx.createRadialGradient(mx + mw/2, my + mh/2, Math.min(mw, mh) * 0.4, mx + mw/2, my + mh/2, Math.max(mw, mh) * 0.6);
-          feather.addColorStop(0, "rgba(0,0,0,0)");
-          feather.addColorStop(1, "rgba(0,0,0,1)");
-          ctx.fillStyle = feather;
-          // Apply a bit of softness to the transition
-          ctx.filter = "blur(3px)";
-          ctx.globalCompositeOperation = "source-over";
-          ctx.restore();
-        });
-      } else {
-        // Draw selection box while dragging
-        if (isDragging && dragStart && currentDrag) {
-          ctx.strokeStyle = editMode === "portrait" ? "#3b82f6" : "#eab308";
-          ctx.setLineDash([6, 3]);
-          ctx.lineWidth = 2;
-          const dx = dragStart.x * canvas.width;
-          const dy = dragStart.y * canvas.height;
-          const dw = (currentDrag.x - dragStart.x) * canvas.width;
-          const dh = (currentDrag.y - dragStart.y) * canvas.height;
-          ctx.strokeRect(dx, dy, dw, dh);
-          ctx.fillStyle = editMode === "portrait" ? "rgba(59, 130, 246, 0.2)" : "rgba(234, 179, 8, 0.2)";
-          ctx.fillRect(dx, dy, dw, dh);
-        }
-
-        // Draw established masks
-        selectedFile.masks.forEach(mask => {
-          ctx.fillStyle = mask.type === "portrait" ? "rgba(59, 130, 246, 0.4)" : "rgba(234, 179, 8, 0.4)";
-          ctx.strokeStyle = mask.type === "portrait" ? "#3b82f6" : "#eab308";
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          
-          const x = mask.x * canvas.width;
-          const y = mask.y * canvas.height;
-          const w = mask.width * canvas.width;
-          const h = mask.height * canvas.height;
+          const color = colors[layer.type];
+          ctx.fillStyle = color.fill;
+          ctx.strokeStyle = color.stroke;
+          ctx.lineWidth = selectedLayer?.id === layer.id ? 3 : 2;
+          ctx.setLineDash(selectedLayer?.id === layer.id ? [0] : [5, 5]);
 
           ctx.fillRect(x, y, w, h);
           ctx.strokeRect(x, y, w, h);
-          
           ctx.setLineDash([]);
+
+          // Label
           ctx.fillStyle = "white";
           ctx.font = "bold 10px Inter";
-          ctx.fillText(mask.type.toUpperCase(), x + 5, y + 15);
+          ctx.fillText(layer.type.toUpperCase(), x + 5, y + 15);
+          
+          if (layer.confidence) {
+            ctx.fillStyle = "#9ca3af";
+            ctx.font = "9px Inter";
+            ctx.fillText(`${(layer.confidence * 100).toFixed(0)}%`, x + 5, y + 28);
+          }
+
+          ctx.globalAlpha = 1;
         });
-      }
+
+        // Draw new layer being created
+        if (isDragging && dragStart && currentDrag && drawingLayer) {
+          ctx.globalAlpha = 0.5;
+          ctx.fillStyle = {
+            face: "rgba(59, 130, 246, 0.3)",
+            text: "rgba(239, 68, 68, 0.3)",
+            signature: "rgba(168, 85, 247, 0.3)",
+            code: "rgba(34, 197, 94, 0.3)",
+          }[drawingLayer] || "rgba(107, 114, 128, 0.3)";
+          ctx.strokeStyle = {
+            face: "#3b82f6",
+            text: "#ef4444",
+            signature: "#a855f7",
+            code: "#22c55e",
+          }[drawingLayer] || "#6b7280";
+          
+          const dx = Math.min(dragStart.x, currentDrag.x) * canvas.width;
+          const dy = Math.min(dragStart.y, currentDrag.y) * canvas.height;
+          const dw = Math.abs(currentDrag.x - dragStart.x) * canvas.width;
+          const dh = Math.abs(currentDrag.y - dragStart.y) * canvas.height;
+          
+          ctx.lineWidth = 2;
+          ctx.fillRect(dx, dy, dw, dh);
+          ctx.strokeRect(dx, dy, dw, dh);
+          ctx.globalAlpha = 1;
+        }
+      };
+
+      img.onerror = () => {
+        console.error("Failed to load image:", selectedFile.originalUrl);
+      };
     };
-  }, [selectedFile, files, selectedFileId, isDragging, dragStart, currentDrag]);
+
+    drawCanvas();
+  }, [selectedFile, selectedLayer, isDragging, dragStart, currentDrag, drawingLayer]);
+
+  // Load OpenCV for text inpainting
+  useEffect(() => {
+    console.log('Starting OpenCV load...');
+    loadOpenCV()
+      .then(() => {
+        console.log('✓ OpenCV promise resolved, setting openCVLoaded to true');
+        setOpenCVLoaded(true);
+      })
+      .catch(err => {
+        console.error("Failed to load OpenCV:", err);
+        // Still allow the app to work with fallback
+        setOpenCVLoaded(false);
+      });
+  }, []);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!editMode || !canvasRef.current) return;
@@ -209,7 +359,7 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
-    if (!isDragging || !dragStart || !currentDrag || !editMode || !selectedFile) {
+    if (!isDragging || !dragStart || !currentDrag || !editMode || !selectedFile || !drawingLayer) {
       setIsDragging(false);
       return;
     }
@@ -220,12 +370,25 @@ export default function App() {
     const height = Math.abs(currentDrag.y - dragStart.y);
 
     if (width > 0.01 && height > 0.01) {
-      const newMask = { type: editMode as "portrait" | "text", x, y, width, height };
+      const newLayer: Layer = {
+        id: `layer-${Date.now()}`,
+        name: `${drawingLayer.charAt(0).toUpperCase() + drawingLayer.slice(1)} ${selectedFile.layers.length + 1}`,
+        type: drawingLayer as any,
+        x,
+        y,
+        width,
+        height,
+        visible: true,
+        locked: false,
+        opacity: 1,
+      };
+      
       setFiles(prev => prev.map(f => 
         f.id === selectedFileId 
-          ? { ...f, masks: [...f.masks, newMask] }
+          ? { ...f, layers: [...f.layers, newLayer] }
           : f
       ));
+      setSelectedLayerId(newLayer.id);
     }
 
     setIsDragging(false);
@@ -233,31 +396,141 @@ export default function App() {
     setCurrentDrag(null);
   };
 
-  const processFile = (id: string) => {
-    setFiles(prev => prev.map(f => f.id === id ? { ...f, isProcessing: true } : f));
-    
-    setTimeout(() => {
-      setFiles(prev => prev.map(f => f.id === id ? { ...f, isProcessing: false, isCompleted: true } : f));
-    }, 2500);
+  const deleteLayer = (layerId: string) => {
+    // Delete layer from selected file
+    setFiles(prev => prev.map(f => 
+      f.id === selectedFileId 
+        ? { ...f, layers: f.layers.filter(l => l.id !== layerId) }
+        : f
+    ));
+    // Clear selection if deleted layer was selected
+    if (selectedLayerId === layerId) setSelectedLayerId(null);
+    console.log(`Deleted layer: ${layerId}`);
   };
 
-  const exportAsset = async (format: "png" | "psd") => {
-    if (!selectedFile || !canvasRef.current) return;
-    setIsExporting(true);
+  const updateLayer = (layerId: string, updates: Partial<Layer>) => {
+    setFiles(prev => prev.map(f => 
+      f.id === selectedFileId 
+        ? { 
+            ...f, 
+            layers: f.layers.map(l => l.id === layerId ? { ...l, ...updates } : l)
+          }
+        : f
+    ));
+    console.log(`Updated layer: ${layerId}`, updates);
+  };
 
+  const removeSelectedTexts = async () => {
+    if (!selectedFile || !canvasRef.current || selectedTextsToRemove.length === 0) return;
+    if (!openCVLoaded) {
+      alert("OpenCV is still loading. Please try again in a moment.");
+      return;
+    }
+
+    setIsInpainting(true);
     try {
       const canvas = canvasRef.current;
       
-      if (format === "png") {
+      // Validate canvas
+      if (!canvas.width || !canvas.height) {
+        throw new Error("Canvas dimensions are invalid. Please make sure an image is loaded.");
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to get canvas context");
+
+      // Create mask from selected text layers
+      const textLayers = selectedFile.layers.filter(
+        l => l.type === "text" && selectedTextsToRemove.includes(l.id)
+      );
+
+      if (textLayers.length === 0) {
+        throw new Error("No valid text layers selected");
+      }
+
+      console.log(`Creating mask for ${textLayers.length} text layers...`);
+      const maskCanvas = createMask(canvas.width, canvas.height, textLayers);
+      
+      console.log("Dilating mask...");
+      const dilatedMask = dilateMask(maskCanvas, 3);
+
+      // Perform inpainting
+      console.log("Starting inpainting process...");
+      const inpaintedCanvas = await inpaintImage({
+        canvas,
+        mask: dilatedMask,
+        method: "telea",
+      });
+
+      console.log("Inpainting complete, updating canvas...");
+      // Update canvas with inpainted result
+      const inpaintedCtx = inpaintedCanvas.getContext("2d");
+      const resultImageData = inpaintedCtx?.getImageData(
+        0,
+        0,
+        inpaintedCanvas.width,
+        inpaintedCanvas.height
+      );
+
+      if (resultImageData) {
+        ctx.putImageData(resultImageData, 0, 0);
+      } else {
+        throw new Error("Failed to get inpainted image data");
+      }
+
+      // Remove text layers from the layer list
+      setFiles(prev =>
+        prev.map(f =>
+          f.id === selectedFileId
+            ? {
+                ...f,
+                layers: f.layers.filter(
+                  l => !(l.type === "text" && selectedTextsToRemove.includes(l.id))
+                ),
+              }
+            : f
+        )
+      );
+
+      setSelectedTextsToRemove([]);
+      setIsRemovingText(false);
+      console.log("Text removal completed successfully");
+    } catch (error) {
+      console.error("Text removal error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Failed to remove text: ${errorMessage}`);
+    } finally {
+      setIsInpainting(false);
+    }
+  };
+
+  const generateDLNumbers = () => {
+    const newPackages = generateMultipleDLPackages(selectedDLState, 5);
+    setGeneratedDLPackages(newPackages);
+  };
+
+  const copyToClipboard = (text: string, index: number, field: "dlNumber" | "icn" | "dd") => {
+    navigator.clipboard.writeText(text);
+    setDlCopiedIndex({ index, field });
+    setTimeout(() => setDlCopiedIndex(null), 2000);
+  };
+
+  const exportAsset = async (format: "png" | "jpg" | "psd") => {
+    if (!selectedFile || !canvasRef.current) return;
+    setIsExporting(true);
+    setExportFormat(format);
+
+    try {
+      const canvas = canvasRef.current;
+      const fileName = selectedFile.name.split(".")[0];
+      
+      if (format === "png" || format === "jpg") {
         const link = document.createElement("a");
-        link.download = `${selectedFile.name.split(".")[0]}_refined.png`;
-        link.href = canvas.toDataURL("image/png");
+        link.download = `${fileName}_edited.${format === "jpg" ? "jpg" : "png"}`;
+        link.href = canvas.toDataURL(`image/${format === "jpg" ? "jpeg" : "png"}`, format === "jpg" ? 0.9 : 1);
         link.click();
       } else if (format === "psd") {
-        // Prepare layered PSD with advanced layer separation
-        const masks = selectedFile.masks;
-        
-        // 1. Get high-res original
+        // Get high-res original
         const originalImg = new Image();
         originalImg.crossOrigin = "anonymous";
         originalImg.src = selectedFile.originalUrl;
@@ -269,40 +542,49 @@ export default function App() {
         const octx = originalCanvas.getContext("2d");
         if (octx) octx.drawImage(originalImg, 0, 0);
 
-        // 2. Create the PSD structure
+        // Create PSD with layers
         const psd: Psd = {
           width: originalImg.width,
           height: originalImg.height,
           children: [
             {
-              name: "Original Image (Reference)",
+              name: "Original Image",
               canvas: originalCanvas,
               hidden: true,
             },
             {
-              name: "Refined Background",
+              name: "Edited Version",
               canvas: canvas,
             },
             {
-              name: "Mask Indicators",
+              name: "Analysis Layers",
               opened: false,
-              children: masks.map((mask, i) => {
+              children: selectedFile.layers.map((layer, i) => {
                 const layerCanvas = document.createElement("canvas");
                 layerCanvas.width = originalImg.width;
                 layerCanvas.height = originalImg.height;
                 const lctx = layerCanvas.getContext("2d");
                 if (lctx) {
-                  lctx.fillStyle = mask.type === "portrait" ? "rgba(59, 130, 246, 0.8)" : "rgba(234, 179, 8, 0.8)";
+                  const colors = {
+                    face: "rgba(59, 130, 246, 0.6)",
+                    text: "rgba(239, 68, 68, 0.6)",
+                    signature: "rgba(168, 85, 247, 0.6)",
+                    code: "rgba(34, 197, 94, 0.6)",
+                    background: "rgba(234, 179, 8, 0.6)",
+                    custom: "rgba(107, 114, 128, 0.6)",
+                  };
+                  lctx.fillStyle = colors[layer.type] || colors.custom;
                   lctx.fillRect(
-                    mask.x * originalImg.width, 
-                    mask.y * originalImg.height, 
-                    mask.width * originalImg.width, 
-                    mask.height * originalImg.height
+                    layer.x * originalImg.width,
+                    layer.y * originalImg.height,
+                    layer.width * originalImg.width,
+                    layer.height * originalImg.height
                   );
                 }
                 return {
-                  name: `${mask.type.toUpperCase()} AREA ${i + 1}`,
+                  name: layer.name,
                   canvas: layerCanvas,
+                  opacity: Math.round(layer.opacity * 255),
                 };
               })
             }
@@ -314,15 +596,17 @@ export default function App() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${selectedFile.name.split(".")[0]}_project.psd`;
+        a.download = `${fileName}_project.psd`;
         document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       }
     } catch (err) {
       console.error("Export Error:", err);
     } finally {
       setIsExporting(false);
+      setExportFormat(null);
     }
   };
 
@@ -333,53 +617,98 @@ export default function App() {
         <div className="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <Shield className="w-5 h-5 text-white" />
+              <ImageIcon className="w-5 h-5 text-white" />
             </div>
             <div className="hidden sm:block">
-              <span className="font-bold text-lg tracking-tight block leading-none">SecureID Pro</span>
-              <span className="text-[9px] text-neutral-500 uppercase tracking-widest font-mono">Workspace v4.0</span>
+              <span className="font-bold text-lg tracking-tight block leading-none">Photo Studio</span>
+              <span className="text-[9px] text-neutral-500 uppercase tracking-widest font-mono">AI-Powered Editor v1.0</span>
+            </div>
+            {/* OpenCV Status */}
+            <div className="ml-4 pl-4 border-l border-neutral-700">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${openCVLoaded ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
+                <span className="text-[9px] text-neutral-400 uppercase font-mono">
+                  {openCVLoaded ? 'OpenCV Ready' : 'Loading...'}
+                </span>
+              </div>
             </div>
           </div>
           
           <div className="flex items-center gap-4">
+            {/* Layer Type Selector */}
             <div className="flex bg-neutral-900/50 rounded-lg p-1 border border-neutral-800">
               <button 
-                onClick={() => setEditMode("portrait")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${editMode === "portrait" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-neutral-400 hover:text-white"}`}
+                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-neutral-400 hover:text-white"}`}
+                title="Draw face area"
               >
-                <User className="w-3.5 h-3.5" /> Portrait Mark
+                <User className="w-3.5 h-3.5" />
               </button>
               <button 
-                onClick={() => setEditMode("text")}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${editMode === "text" ? "bg-yellow-600 text-white shadow-lg shadow-yellow-500/20" : "text-neutral-400 hover:text-white"}`}
+                onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "text-neutral-400 hover:text-white"}`}
+                title="Draw text area"
               >
-                <FileText className="w-3.5 h-3.5" /> Text Mark
+                <FileText className="w-3.5 h-3.5" />
               </button>
+              <button 
+                onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white shadow-lg shadow-purple-500/20" : "text-neutral-400 hover:text-white"}`}
+                title="Draw signature area"
+              >
+                <Eraser className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white shadow-lg shadow-green-500/20" : "text-neutral-400 hover:text-white"}`}
+                title="Draw code area"
+              >
+                <Code className="w-3.5 h-3.5" />
+              </button>
+              <div className="w-px bg-neutral-700 mx-1" />
               <button 
                 onClick={() => setEditMode(null)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase transition-all ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
+                title="Pointer mode"
               >
-                <MousePointer2 className="w-3.5 h-3.5" /> Pointer
+                <MousePointer2 className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => setIsRemovingText(!isRemovingText)}
+                disabled={!selectedFile || !openCVLoaded}
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20" : "text-neutral-400 hover:text-white"}`}
+                title="Remove text with inpainting"
+              >
+                <Wand2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
             <div className="h-6 w-px bg-neutral-800 mx-1" />
 
+            {/* Export Buttons */}
             <div className="flex gap-2">
               <button 
                 onClick={() => exportAsset("png")}
                 disabled={!selectedFile || isExporting}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all border border-neutral-700"
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
               >
-                {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                IMG
+                {isExporting && exportFormat === "png" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                PNG
+              </button>
+              <button 
+                onClick={() => exportAsset("jpg")}
+                disabled={!selectedFile || isExporting}
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+              >
+                {isExporting && exportFormat === "jpg" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+                JPG
               </button>
               <button 
                 onClick={() => exportAsset("psd")}
                 disabled={!selectedFile || isExporting}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-[10px] font-bold uppercase transition-all shadow-lg shadow-blue-500/20"
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all shadow-lg shadow-blue-500/20"
               >
-                {isExporting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                {isExporting && exportFormat === "psd" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
                 PSD
               </button>
             </div>
@@ -389,10 +718,10 @@ export default function App() {
 
       {/* Main UI */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar: Asset Browser */}
+        {/* Left Sidebar: File Browser */}
         <div className="w-72 border-r border-neutral-800/50 bg-[#080808] flex flex-col shrink-0">
           <div className="p-4 border-b border-neutral-800/50 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Queue Library</span>
+            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Photo Library</span>
             <span className="bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-400 px-2 py-0.5 rounded font-mono">{files.length}/4</span>
           </div>
           
@@ -406,9 +735,16 @@ export default function App() {
                 <img src={file.originalUrl} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
-                {file.isCompleted && (
-                  <div className="absolute top-2 left-2 bg-green-500 text-white p-1 rounded-md shadow-lg">
+                {file.isAnalyzed && (
+                  <div className="absolute top-2 left-2 bg-green-500 text-white p-1.5 rounded-md shadow-lg flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
+                    <span className="text-[8px] font-bold">{file.layers.length}</span>
+                  </div>
+                )}
+
+                {file.isAnalyzing && (
+                  <div className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                   </div>
                 )}
 
@@ -433,14 +769,14 @@ export default function App() {
                 <div className="p-3 bg-neutral-900 rounded-xl">
                   <Plus className="w-5 h-5" />
                 </div>
-                Import
+                Upload
               </button>
             )}
           </div>
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden" accept="image/*" />
         </div>
 
-        {/* Center: Stage */}
+        {/* Center: Canvas */}
         <div className="flex-1 bg-[#050505] relative overflow-hidden flex items-center justify-center p-8 lg:p-16">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#111_0%,_transparent_70%)] pointer-events-none" />
           
@@ -459,7 +795,7 @@ export default function App() {
               />
               
               <AnimatePresence>
-                {selectedFile.isProcessing && (
+                {selectedFile.isAnalyzing && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -468,14 +804,14 @@ export default function App() {
                   >
                     <div className="relative">
                       <div className="w-20 h-20 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-                      <Shield className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-500" />
+                      <Zap className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-500" />
                     </div>
-                    <p className="mt-8 text-blue-400 font-black uppercase tracking-[0.6em] text-[10px]">Processing Layer Data</p>
+                    <p className="mt-8 text-blue-400 font-black uppercase tracking-[0.6em] text-[10px]">Analyzing Image</p>
                     <div className="mt-8 w-64 h-1 bg-neutral-800 rounded-full overflow-hidden">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: "100%" }}
-                        transition={{ duration: 2.5, ease: "easeInOut" }}
+                        transition={{ duration: 3, ease: "easeInOut" }}
                         className="h-full bg-gradient-to-r from-blue-600 to-indigo-400"
                       />
                     </div>
@@ -483,11 +819,10 @@ export default function App() {
                 )}
               </AnimatePresence>
 
-              {/* In-Stage Overlay */}
               <div className="absolute bottom-4 left-4 flex gap-2">
                 <div className="px-3 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-full flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">HD Preview</span>
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">Live Editor</span>
                 </div>
               </div>
             </div>
@@ -498,80 +833,387 @@ export default function App() {
                 <ImageIcon className="w-10 h-10 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-white tracking-tight">Waiting for Assets</h3>
+                <h3 className="text-xl font-bold text-white tracking-tight">Upload Your Photo</h3>
                 <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] font-medium max-w-xs mx-auto leading-relaxed">
-                  The high-fidelity refinement engine requires image input to initialize.
+                  AI will automatically detect faces, text, signatures, codes, and backgrounds.
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-80 border-l border-neutral-800/50 bg-[#080808] p-6 space-y-10 shrink-0">
+        {/* Right Sidebar: Layers & Adjustments */}
+        <div className="w-80 border-l border-neutral-800/50 bg-[#080808] p-6 space-y-8 shrink-0 overflow-y-auto">
+          {/* Adjustments */}
+          {selectedFile && (
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Brightness</label>
+                  <input 
+                    type="range" 
+                    min="-10" 
+                    max="10" 
+                    value={selectedFile.adjustments.brightness}
+                    onChange={(e) => setFiles(prev => prev.map(f => 
+                      f.id === selectedFileId 
+                        ? { ...f, adjustments: { ...f.adjustments, brightness: Number(e.target.value) } }
+                        : f
+                    ))}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Contrast</label>
+                  <input 
+                    type="range" 
+                    min="-10" 
+                    max="10" 
+                    value={selectedFile.adjustments.contrast}
+                    onChange={(e) => setFiles(prev => prev.map(f => 
+                      f.id === selectedFileId 
+                        ? { ...f, adjustments: { ...f.adjustments, contrast: Number(e.target.value) } }
+                        : f
+                    ))}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Saturation</label>
+                  <input 
+                    type="range" 
+                    min="-10" 
+                    max="10" 
+                    value={selectedFile.adjustments.saturation}
+                    onChange={(e) => setFiles(prev => prev.map(f => 
+                      f.id === selectedFileId 
+                        ? { ...f, adjustments: { ...f.adjustments, saturation: Number(e.target.value) } }
+                        : f
+                    ))}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Layers List */}
           <div className="space-y-4">
             <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center justify-between">
-              Layers & Masks
-              <span className="text-neutral-700 font-mono italic">#{selectedFile?.masks.length || 0}</span>
+              Detected Layers
+              <span className="text-neutral-700 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
             
-            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-              {selectedFile?.masks.length === 0 ? (
-                <div className="p-8 rounded-2xl bg-neutral-900/30 border border-dashed border-neutral-800 flex flex-col items-center justify-center text-center">
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+              {selectedFile?.layers.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-neutral-900/30 border border-dashed border-neutral-800 flex flex-col items-center justify-center text-center">
                   <Layers className="w-6 h-6 text-neutral-700 mb-3" />
-                  <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-tight">No active tags</p>
+                  <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-tight">No layers detected</p>
+                  <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest">Active Layers</span>
+                selectedFile?.layers.map((layer) => (
+                  <div 
+                    key={layer.id}
+                    onClick={() => setSelectedLayerId(layer.id)}
+                    className={`group flex items-center gap-3 p-3 rounded-xl transition-all border cursor-pointer ${
+                      selectedLayer?.id === layer.id 
+                        ? "bg-neutral-800 border-neutral-700" 
+                        : "bg-neutral-900/50 border-neutral-800 hover:border-neutral-700"
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg flex-shrink-0 ${
+                      {
+                        face: "bg-blue-500/10 text-blue-500",
+                        text: "bg-red-500/10 text-red-500",
+                        signature: "bg-purple-500/10 text-purple-500",
+                        code: "bg-green-500/10 text-green-500",
+                        background: "bg-yellow-500/10 text-yellow-500",
+                        custom: "bg-gray-500/10 text-gray-500",
+                      }[layer.type]
+                    }`}>
+                      {{
+                        face: <User className="w-4 h-4" />,
+                        text: <FileText className="w-4 h-4" />,
+                        signature: <Eraser className="w-4 h-4" />,
+                        code: <Code className="w-4 h-4" />,
+                        background: <ImageIcon className="w-4 h-4" />,
+                        custom: <Square className="w-4 h-4" />,
+                      }[layer.type]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-bold text-neutral-300 uppercase truncate block">{layer.name}</span>
+                      <span className="text-[8px] text-neutral-600 font-mono">
+                        {(layer.x * 100).toFixed(0)}%, {(layer.y * 100).toFixed(0)}%
+                      </span>
+                    </div>
                     <button 
-                      onClick={() => selectedFileId && resetFile(selectedFileId)}
-                      className="text-[9px] font-bold text-red-500 uppercase hover:underline"
+                      onClick={(e) => { e.stopPropagation(); deleteLayer(layer.id); }}
+                      className="opacity-0 group-hover:opacity-100 text-neutral-700 hover:text-red-500 transition-colors"
                     >
-                      Reset All
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                  {selectedFile?.masks.map((mask, i) => (
-                    <div key={i} className="group flex items-center gap-3 bg-neutral-900/50 border border-neutral-800 hover:border-neutral-700 p-3 rounded-xl transition-all">
-                      <div className={`p-1.5 rounded-lg ${mask.type === "portrait" ? "bg-blue-500/10 text-blue-500" : "bg-yellow-500/10 text-yellow-500"}`}>
-                        {mask.type === "portrait" ? <User className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
-                      </div>
-                      <div>
-                        <span className="text-[10px] font-black text-neutral-300 uppercase tracking-tighter block">{mask.type} DEF_0{i + 1}</span>
-                        <span className="text-[9px] text-neutral-600 font-mono leading-none">POS: {mask.x.toFixed(2)}, {mask.y.toFixed(2)}</span>
-                      </div>
-                      <button 
-                        onClick={() => setFiles(prev => prev.map(f => f.id === selectedFileId ? { ...f, masks: f.masks.filter((_, idx) => idx !== i), isCompleted: false } : f))}
-                        className="ml-auto text-neutral-700 hover:text-red-500 transition-colors"
-                      >
-                        <Eraser className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                ))
               )}
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Operations</h4>
-            <button 
-              onClick={() => selectedFileId && processFile(selectedFileId)}
-              disabled={!selectedFile || selectedFile.masks.length === 0 || selectedFile.isProcessing}
-              className="w-full bg-white text-black hover:bg-neutral-200 disabled:opacity-30 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.1em] transition-all flex items-center justify-center gap-3 shadow-[0_20px_40px_-10px_rgba(255,255,255,0.1)] active:scale-[0.98]"
-            >
-              {selectedFile?.isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Refine Selected Asset
-            </button>
-            <div className="p-4 rounded-2xl bg-neutral-900/30 border border-neutral-800 space-y-3">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <span className="text-[10px] font-bold text-neutral-400 uppercase">Process Sequence</span>
+          {/* Layer Properties */}
+          {selectedLayer && (
+            <div className="space-y-4 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800">
+              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Layer Properties</h4>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Opacity</label>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    step="0.1"
+                    value={selectedLayer.opacity}
+                    onChange={(e) => updateLayer(selectedLayer.id, { opacity: Number(e.target.value) })}
+                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                  />
+                  <span className="text-[8px] text-neutral-600">{(selectedLayer.opacity * 100).toFixed(0)}%</span>
+                </div>
+                
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => updateLayer(selectedLayer.id, { visible: !selectedLayer.visible })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border ${
+                      selectedLayer.visible
+                        ? "bg-blue-600/20 border-blue-600 text-blue-400"
+                        : "bg-neutral-800/50 border-neutral-700 text-neutral-600"
+                    }`}
+                  >
+                    <Eye className="w-3 h-3" />
+                    {selectedLayer.visible ? "Visible" : "Hidden"}
+                  </button>
+                  <button 
+                    onClick={() => updateLayer(selectedLayer.id, { locked: !selectedLayer.locked })}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border ${
+                      selectedLayer.locked
+                        ? "bg-red-600/20 border-red-600 text-red-400"
+                        : "bg-neutral-800/50 border-neutral-700 text-neutral-600"
+                    }`}
+                  >
+                    <Shield className="w-3 h-3" />
+                    {selectedLayer.locked ? "Locked" : "Unlocked"}
+                  </button>
+                </div>
               </div>
-              <p className="text-[9px] text-neutral-600 leading-relaxed font-medium">
-                Asset will be processed using high-frequency fill algorithms. Neural network rebuilds the security guilloche patterns and textures based on surround data.
-              </p>
+            </div>
+          )}
+
+          {/* Statistics */}
+          {selectedFile?.isAnalyzed && (
+            <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 space-y-3">
+              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Detection Stats
+              </h4>
+              <div className="text-[9px] space-y-1 text-neutral-400">
+                <div className="flex justify-between">
+                  <span>Faces detected:</span>
+                  <span className="font-bold">{selectedFile.analysis?.faces.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Text areas:</span>
+                  <span className="font-bold">{selectedFile.analysis?.text.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Signatures:</span>
+                  <span className="font-bold">{selectedFile.analysis?.signatures.length || 0}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>QR/Barcodes:</span>
+                  <span className="font-bold">{selectedFile.analysis?.codes.length || 0}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Text Removal Section */}
+          {isRemovingText && selectedFile && (
+            <div className="p-4 rounded-xl bg-amber-900/20 border border-amber-700/50 space-y-4">
+              <h4 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <Wand2 className="w-4 h-4" />
+                Remove Text (Inpainting)
+              </h4>
+              
+              <div className="space-y-3">
+                <p className="text-[9px] text-amber-700">Select text layers to remove and fill with background:</p>
+                
+                <div className="space-y-2 max-h-[25vh] overflow-y-auto">
+                  {selectedFile.layers.filter(l => l.type === "text").length === 0 ? (
+                    <p className="text-[8px] text-neutral-600 italic">No text layers found</p>
+                  ) : (
+                    selectedFile.layers
+                      .filter(l => l.type === "text")
+                      .map(layer => (
+                        <label 
+                          key={layer.id}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-neutral-800/30 hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                        >
+                          <input 
+                            type="checkbox"
+                            checked={selectedTextsToRemove.includes(layer.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedTextsToRemove([...selectedTextsToRemove, layer.id]);
+                              } else {
+                                setSelectedTextsToRemove(selectedTextsToRemove.filter(id => id !== layer.id));
+                              }
+                            }}
+                            className="w-4 h-4 accent-amber-600"
+                          />
+                          <span className="text-[9px] font-bold text-neutral-300 flex-1">{layer.name}</span>
+                        </label>
+                      ))
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button 
+                    onClick={removeSelectedTexts}
+                    disabled={selectedTextsToRemove.length === 0 || isInpainting}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-amber-600/20 border-amber-600 text-amber-400 hover:bg-amber-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isInpainting ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="w-3 h-3" />
+                        Remove Selected
+                      </>
+                    )}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsRemovingText(false);
+                      setSelectedTextsToRemove([]);
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:text-neutral-300"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DL Number Generator */}
+          <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 space-y-4">
+            <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              DL Number Generator
+            </h4>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">State</label>
+                <select 
+                  value={selectedDLState}
+                  onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
+                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-[9px] font-bold text-neutral-300 focus:border-blue-600 focus:outline-none"
+                >
+                  {getAllStates().map((state) => (
+                    <option key={state.stateCode} value={state.stateCode}>
+                      {state.state} ({state.stateCode}) - {state.format}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button 
+                onClick={generateDLNumbers}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-400 hover:bg-blue-600/30"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Generate
+              </button>
+
+              {generatedDLPackages.length > 0 && (
+                <div className="space-y-3 max-h-[40vh] overflow-y-auto">
+                  <p className="text-[8px] text-neutral-600 uppercase font-bold">Generated Packages:</p>
+                  {generatedDLPackages.map((pkg, index) => (
+                    <div 
+                      key={index}
+                      className="p-3 rounded-lg bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 transition-all space-y-2"
+                    >
+                      {/* DL Number */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-[7px] text-neutral-600 uppercase font-bold mb-1">DL #</p>
+                          <code className="text-[8px] font-mono text-neutral-300">
+                            {pkg.dlNumber}
+                          </code>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard(pkg.dlNumber, index, "dlNumber")}
+                          className="flex-shrink-0 p-1.5 rounded text-neutral-600 hover:text-neutral-300 hover:bg-neutral-700 transition-colors"
+                          title="Copy DL Number"
+                        >
+                          {dlCopiedIndex?.index === index && dlCopiedIndex?.field === "dlNumber" ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* ICN */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-[7px] text-neutral-600 uppercase font-bold mb-1">ICN</p>
+                          <code className="text-[8px] font-mono text-neutral-300">
+                            {pkg.icn}
+                          </code>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard(pkg.icn, index, "icn")}
+                          className="flex-shrink-0 p-1.5 rounded text-neutral-600 hover:text-neutral-300 hover:bg-neutral-700 transition-colors"
+                          title="Copy ICN"
+                        >
+                          {dlCopiedIndex?.index === index && dlCopiedIndex?.field === "icn" ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* DD */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-[7px] text-neutral-600 uppercase font-bold mb-1">DD</p>
+                          <code className="text-[8px] font-mono text-neutral-300">
+                            {pkg.dd}
+                          </code>
+                        </div>
+                        <button 
+                          onClick={() => copyToClipboard(pkg.dd, index, "dd")}
+                          className="flex-shrink-0 p-1.5 rounded text-neutral-600 hover:text-neutral-300 hover:bg-neutral-700 transition-colors"
+                          title="Copy DD"
+                        >
+                          {dlCopiedIndex?.index === index && dlCopiedIndex?.field === "dd" ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
