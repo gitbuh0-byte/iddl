@@ -13,17 +13,20 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const VALID_USERNAME = "bscit-05-0250/2021";
-  const VALID_PASSWORD = "bscit-05-250/2021";
+  const VALID_USERNAME = "BSCIT-05-0250/2021";
+  const VALID_PASSWORD = "0p9o8i7u6y";
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setIsLoading(true);
 
+    const trimmedUsername = username.trim();
+    const trimmedPassword = password.trim();
+
     // Simulate a small delay for better UX
     setTimeout(() => {
-      if (username === VALID_USERNAME && password === VALID_PASSWORD) {
+      if (trimmedUsername === VALID_USERNAME && trimmedPassword === VALID_PASSWORD) {
         // Store authentication in sessionStorage
         sessionStorage.setItem("isAuthenticated", "true");
         onLoginSuccess();
