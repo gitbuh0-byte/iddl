@@ -206,23 +206,124 @@ async function detectCodes(pixelData: Uint8ClampedArray, imgWidth: number, imgHe
   return codes;
 }
 
+/**
+ * Detect text regions using edge detection and high-frequency analysis
+ * This is a fallback/complementary method to OCR
+ */
+async function detectTextRegions(pixelData: Uint8ClampedArray, imgWidth: number, imgHeight: number): Promise<DetectionResult['text']> {
+  console.log("Detecting text regions using edge analysis...");
+  const textAreas: DetectionResult['text'] = [];
+  const blockSize = Math.floor(Math.max(imgWidth, imgHeight) / 15);
+  
+  for (let y = 0; y < imgHeight; y += blockSize) {
+    for (let x = 0; x < imgWidth; x += blockSize) {
+      let edgePixels = 0;
+      let totalPixels = 0;
+      let minX = x, maxX = x + blockSize, minY = y, maxY = y + blockSize;
+      
+      // Analyze block for high-frequency content (characteristic of text)
+      for (let py = y; py < Math.min(y + blockSize, imgHeight); py++) {
+        for (let px = x; px < Math.min(x + blockSize, imgWidth); px++) {
+          const idx = (py * imgWidth + px) * 4;
+          const pixelValue = pixelData[idx]; // Use grayscale
+          
+          // Check neighbors for edge/variation (text has many edges)
+          if (px > 0 && py > 0 && px < imgWidth - 1 && py < imgHeight - 1) {
+            const leftIdx = (py * imgWidth + (px - 1)) * 4;
+            const topIdx = ((py - 1) * imgWidth + px) * 4;
+            const leftPixel = pixelData[leftIdx];
+            const topPixel = pixelData[topIdx];
+            
+            // High variation indicates edges (text)
+            if (Math.abs(pixelValue - leftPixel) > 30 || Math.abs(pixelValue - topPixel) > 30) {
+              edgePixels++;
+              minX = Math.min(minX, px);
+              maxX = Math.max(maxX, px);
+              minY = Math.min(minY, py);
+              maxY = Math.max(maxY, py);
+            }
+          }
+          totalPixels++;
+        }
+      }
+      
+      // If significant edge content found, likely a text region
+      if (totalPixels > 0 && edgePixels / totalPixels > 0.15) {
+        const width = maxX - minX;
+        const height = maxY - minY;
+        
+        // Filter for reasonable text regions
+        if (width > 20 && height > 10 && width / height > 0.5 && width / height < 20) {
+          textAreas.push({
+            x: (minX / imgWidth) * 100,
+            y: (minY / imgHeight) * 100,
+            width: (width / imgWidth) * 100,
+            height: (height / imgHeight) * 100,
+            content: "[Text Region]",
+          });
+        }
+      }
+    }
+  }
+  
+  console.log(`Edge detection found ${textAreas.length} text regions`);
+  return textAreas;
+}
+
 async function detectText(imagePath: string, imgWidth: number, imgHeight: number): Promise<DetectionResult['text']> {
   try {
-    const result = await Tesseract.recognize(imagePath, "eng");
+    console.log("Starting text detection with Tesseract...");
+    
+    // Load and preprocess image for better OCR
+    const image = await Jimp.read(imagePath);
+    
+    // Enhance image for better text recognition
+    // Increase contrast and sharpen
+    image.contrast(0.5); // Enhance contrast
+    image.sharpen({ x: 2, y: 2 }); // Sharpen edges
+    
+    // Create temporary enhanced image
+    const enhancedPath = imagePath + ".enhanced.png";
+    await image.write(enhancedPath);
+    
+    // Run Tesseract OCR on enhanced image
+    const result = await Tesseract.recognize(enhancedPath, "eng");
     const textAreas: DetectionResult['text'] = [];
-
+    
+    // Use much lower confidence threshold for document text
+    const minConfidence = 10; // Much lower threshold for document detection
+    
     result.data.words.forEach((word: any) => {
-      if (word.conf > 50) {
-        textAreas.push({
-          x: (word.bbox.x0 / imgWidth) * 100,
-          y: (word.bbox.y0 / imgHeight) * 100,
-          width: ((word.bbox.x1 - word.bbox.x0) / imgWidth) * 100,
-          height: ((word.bbox.y1 - word.bbox.y0) / imgHeight) * 100,
-          content: word.text,
-        });
+      // Filter by confidence and minimum size
+      if (word.conf > minConfidence && word.text && word.text.trim().length > 0) {
+        // Calculate dimensions
+        const x = (word.bbox.x0 / imgWidth) * 100;
+        const y = (word.bbox.y0 / imgHeight) * 100;
+        const width = ((word.bbox.x1 - word.bbox.x0) / imgWidth) * 100;
+        const height = ((word.bbox.y1 - word.bbox.y0) / imgHeight) * 100;
+        
+        // Filter out very small or very large text boxes (likely noise or artifacts)
+        if (width > 0.1 && height > 0.1 && width < 100 && height < 100) {
+          textAreas.push({
+            x: Math.max(0, x),
+            y: Math.max(0, y),
+            width: Math.min(100, width),
+            height: Math.min(100, height),
+            content: word.text.trim(),
+          });
+        }
       }
     });
-
+    
+    console.log(`Tesseract found ${textAreas.length} text regions`);
+    
+    // Cleanup enhanced image
+    try {
+      fs.unlinkSync(enhancedPath);
+    } catch (e) {
+      // File may not exist
+    }
+    
     return textAreas;
   } catch (err) {
     console.error("Text detection error:", err);
@@ -321,15 +422,31 @@ async function analyzeImage(imagePath: string): Promise<DetectionResult> {
     }
 
     // Run additional detections
-    const [detectedSignatures, detectedCodes, detectedText] = await Promise.all([
+    const [detectedSignatures, detectedCodes, detectedText, edgeDetectedText] = await Promise.all([
       detectSignatures(pixelData, imgWidth, imgHeight),
       detectCodes(pixelData, imgWidth, imgHeight),
       detectText(imagePath, imgWidth, imgHeight),
+      detectTextRegions(pixelData, imgWidth, imgHeight),
     ]);
 
     signatures.push(...detectedSignatures);
     codes.push(...detectedCodes);
     text.push(...detectedText);
+    
+    // Add edge-detected text regions that don't overlap with OCR results
+    edgeDetectedText.forEach((edgeText) => {
+      const overlaps = text.some((ocrText) => {
+        // Check if regions overlap
+        return !(edgeText.x + edgeText.width < ocrText.x ||
+                 edgeText.x > ocrText.x + ocrText.width ||
+                 edgeText.y + edgeText.height < ocrText.y ||
+                 edgeText.y > ocrText.y + ocrText.height);
+      });
+      
+      if (!overlaps) {
+        text.push(edgeText);
+      }
+    });
 
     // Clean up TensorFlow tensors
     tfImage.dispose();
