@@ -1405,7 +1405,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1415,7 +1415,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
@@ -1595,10 +1595,10 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="p-1.5 rounded-full bg-red-600/15 text-red-300 border border-red-500/20 hover:bg-red-600/25 hover:text-red-100 transition"
+              className="p-1 rounded-full bg-red-600/15 text-red-300 border border-red-500/20 hover:bg-red-600/25 hover:text-red-100 transition"
               title="Logout"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -1930,10 +1930,10 @@ export default function App() {
           )}
 
           {/* Layers List */}
-          <div className="space-y-4">
-            <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.25em] flex items-center justify-between">
+          <div className="space-y-3">
+            <h4 className="text-[8px] font-semibold text-neutral-500 uppercase tracking-[0.3em] flex items-center justify-between">
               Detected Layers
-              <span className="text-[8px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
+              <span className="text-[7px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
             
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
@@ -1948,13 +1948,13 @@ export default function App() {
                   <div 
                     key={layer.id}
                     onClick={() => setSelectedLayerId(layer.id)}
-                    className={`group flex items-center gap-3 p-3 rounded-xl transition-all border cursor-pointer ${
+                    className={`group flex items-center gap-2 p-2 rounded-xl transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
                         ? "bg-neutral-800 border-neutral-700" 
                         : "bg-[var(--panel)]/90 border-[var(--panel-border)] hover:border-[var(--text)]/20"
                     }`}
                   >
-                    <div className={`p-2 rounded-lg flex-shrink-0 ${
+                    <div className={`p-1.5 rounded-lg flex-shrink-0 ${
                       {
                         face: "bg-blue-500/10 text-blue-500",
                         text: "bg-red-500/10 text-red-500",
@@ -1966,18 +1966,18 @@ export default function App() {
                       }[layer.type]
                     }`}>
                       {{
-                        face: <User className="w-4 h-4" />,
-                        text: <FileText className="w-4 h-4" />,
-                        signature: <Eraser className="w-4 h-4" />,
-                        code: <Code className="w-4 h-4" />,
-                        background: <ImageIcon className="w-4 h-4" />,
-                        custom: <Square className="w-4 h-4" />,
-                        image: <ImageIcon className="w-4 h-4" />,
+                        face: <User className="w-3 h-3" />,
+                        text: <FileText className="w-3 h-3" />,
+                        signature: <Eraser className="w-3 h-3" />,
+                        code: <Code className="w-3 h-3" />,
+                        background: <ImageIcon className="w-3 h-3" />,
+                        custom: <Square className="w-3 h-3" />,
+                        image: <ImageIcon className="w-3 h-3" />,
                       }[layer.type]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-bold text-neutral-300 uppercase truncate block">{layer.name}</span>
-                      <span className="text-[8px] text-neutral-600 font-mono">
+                      <span className="text-[9px] font-bold text-neutral-300 uppercase truncate block">{layer.name}</span>
+                      <span className="text-[7px] text-neutral-600 font-mono">
                         {(layer.x * 100).toFixed(0)}%, {(layer.y * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -1991,7 +1991,7 @@ export default function App() {
                       disabled={isInpainting}
                       className="opacity-0 group-hover:opacity-100 text-neutral-700 hover:text-red-500 transition-colors disabled:opacity-50"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3 h-3" />
                     </button>
                   </div>
                 ))
@@ -2400,8 +2400,8 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-2.5 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2">
-            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em] flex items-center gap-1.5">
+          <div className="p-2 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2">
+            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-1.5">
               <CreditCard className="w-3 h-3" />
               DL Number Generator
             </h4>
@@ -2412,7 +2412,7 @@ export default function App() {
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-[9px] font-semibold text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
+                  className="relative z-20 w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-[8px] font-semibold tracking-tight text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
@@ -2424,7 +2424,7 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
+                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[7px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
               >
                 <RefreshCw className="w-3 h-3" />
                 Generate
