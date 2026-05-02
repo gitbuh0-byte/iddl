@@ -230,7 +230,7 @@ export default function App() {
     files: ManagedFile[];
     selectedFileId: string | null;
     selectedLayerId: string | null;
-    editMode: "add" | "edit" | null;
+    editMode: "add" | "edit" | "select" | null;
     drawingLayer: "face" | "text" | "signature" | "code" | null;
     isRemovingText: boolean;
     selectedTextsToRemove: string[];
@@ -739,7 +739,7 @@ export default function App() {
               ctx.setLineDash([]);
               
               // Draw resize handles
-              const handleSize = 7;
+              const handleSize = 5;
               const handles = [
                 { x: x - handleSize, y: y - handleSize }, // nw
                 { x: x + w - handleSize, y: y - handleSize }, // ne
@@ -748,7 +748,7 @@ export default function App() {
               ];
               
               ctx.fillStyle = "rgba(0, 217, 255, 0.9)";
-              ctx.strokeStyle = "#ffffff";
+              ctx.strokeStyle = "rgba(255,255,255,0.18)";
               ctx.lineWidth = 1;
               handles.forEach(handle => {
                 ctx.fillRect(handle.x, handle.y, handleSize * 2, handleSize * 2);
@@ -1386,7 +1386,7 @@ export default function App() {
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-4 sm:py-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <ImageIcon className="w-5 h-5 text-white" />
@@ -1433,35 +1433,35 @@ export default function App() {
                 onClick={() => setEditMode(null)}
                 className={`p-1 rounded-full transition ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <MousePointer2 className="w-4 h-4" />
+                <MousePointer2 className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Face region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
                 className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <User className="w-4 h-4" />
+                <User className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Text region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
                 className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Signature region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
                 className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Eraser className="w-4 h-4" />
+                <Eraser className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Code region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
                 className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Code className="w-4 h-4" />
+                <Code className="w-3.5 h-3.5" />
               </button>
               <button
                 title="Remove text"
@@ -1477,19 +1477,19 @@ export default function App() {
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="p-2 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+              className="p-1.5 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-3.5 h-3.5" />
             </button>
 
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="p-2 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+                className="p-1.5 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
                 title="More actions"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
               {showHeaderMenu && (
                 <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-[var(--surface)] border border-[var(--panel-border)] shadow-2xl p-2 z-50">
@@ -1622,25 +1622,25 @@ export default function App() {
 
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Left Sidebar: File Browser */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-72 border-r border-[var(--panel-border)] bg-[var(--surface)] flex flex-col shrink-0"}>
-          <div className="p-4 border-b border-neutral-800/50 flex items-center justify-between">
-            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Photo Library</span>
+        {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-[var(--panel-border)] bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
+          <div className="p-3 lg:p-4 border-b border-neutral-800/50 flex items-center justify-between flex-shrink-0">
+            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Library</span>
             <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[10px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto p-2 lg:p-4 space-y-2 lg:space-y-4">
             {files.map(file => (
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[14/9] rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]" : "border-neutral-800 hover:border-neutral-700"}`}
+                className={`group relative aspect-[14/9] rounded-lg lg:rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]" : "border-neutral-800 hover:border-neutral-700"}`}
               >
                 <img src={file.originalUrl} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
                 {file.isAnalyzed && (
-                  <div className="absolute top-2 left-2 bg-green-500 text-white p-1.5 rounded-md shadow-lg flex items-center gap-1">
+                  <div className="absolute top-2 left-2 bg-green-500 text-white p-1 lg:p-1.5 rounded-md shadow-lg flex items-center gap-1">
                     <CheckCircle2 className="w-3 h-3" />
                     <span className="text-[8px] font-bold">{file.layers.length}</span>
                   </div>
@@ -1652,15 +1652,15 @@ export default function App() {
                   </div>
                 )}
 
-                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
-                  <span className="text-[9px] text-white font-bold truncate block">{file.name}</span>
+                <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 p-2 lg:p-3 opacity-0 group-hover:opacity-100 transition-all transform translate-y-1 group-hover:translate-y-0">
+                  <span className="text-[8px] lg:text-[9px] text-white font-bold truncate block">{file.name}</span>
                 </div>
 
                 <button 
                   onClick={(e) => { e.stopPropagation(); removeFile(file.id); }}
-                  className="absolute top-2 right-2 p-1.5 bg-red-600/90 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 scale-90 hover:scale-100"
+                  className="absolute top-2 right-2 p-1 lg:p-1.5 bg-red-600/90 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 scale-90 hover:scale-100"
                 >
-                  <Trash2 className="w-3 h-3" />
+                  <Trash2 className="w-2.5 h-2.5 lg:w-3 lg:h-3" />
                 </button>
               </div>
             ))}
@@ -1668,10 +1668,10 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[14/9] rounded-xl border-2 border-dashed border-neutral-800 flex flex-col items-center justify-center gap-2 text-neutral-600 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-[10px] font-black uppercase tracking-widest"
+                className="w-full aspect-[14/9] rounded-lg lg:rounded-xl border-2 border-dashed border-neutral-800 flex flex-col items-center justify-center gap-1 lg:gap-2 text-neutral-600 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-[9px] lg:text-[10px] font-black uppercase tracking-widest"
               >
-                <div className="p-3 bg-neutral-900 rounded-xl">
-                  <Plus className="w-5 h-5" />
+                <div className="p-2 lg:p-3 bg-neutral-900 rounded-lg lg:rounded-xl">
+                  <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
                 </div>
                 Upload
               </button>
@@ -1697,7 +1697,7 @@ export default function App() {
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
                 draggable={false}
-                style={{ touchAction: "none", WebkitUserDrag: "none" }}
+                style={{ touchAction: "none" }}
                 className={`w-full block h-auto ${editMode ? "cursor-crosshair" : "cursor-default"}`}
               />
               {selectedLayer?.type === "image" && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
@@ -1719,7 +1719,7 @@ export default function App() {
                     {handles.map((handle) => (
                       <div
                         key={handle.key}
-                        className="absolute w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-lg"
+                        className="absolute w-2.5 h-2.5 rounded-full bg-blue-500 border border-blue-300/80 shadow-lg"
                         style={{ left: handle.left, top: handle.top, transform: "translate(-50%, -50%)" }}
                       />
                     ))}
@@ -1798,16 +1798,16 @@ export default function App() {
           )}
         </div>
 
-        {/* Right Sidebar: Layers & Adjustments */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-[var(--panel-border)] bg-[var(--surface)] p-4 lg:p-6 space-y-8 shrink-0 overflow-y-auto"}>
+        {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-[var(--panel-border)] bg-[var(--surface)] p-3 lg:p-6 space-y-6 lg:space-y-8 shrink-0 overflow-y-auto max-h-[40vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
+            <div className="space-y-3 lg:space-y-4">
+              <h4 className="text-[9px] lg:text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
               
-              <div className="space-y-3">
+              <div className="space-y-2 lg:space-y-3">
                 <div>
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Brightness</label>
+                  <label className="text-[8px] lg:text-[9px] font-bold text-neutral-500 uppercase mb-1 lg:mb-2 block">Brightness</label>
                   <input 
                     type="range" 
                     min="-10" 
@@ -1822,7 +1822,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Contrast</label>
+                  <label className="text-[8px] lg:text-[9px] font-bold text-neutral-500 uppercase mb-1 lg:mb-2 block">Contrast</label>
                   <input 
                     type="range" 
                     min="-10" 
@@ -1837,7 +1837,7 @@ export default function App() {
                   />
                 </div>
                 <div>
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Saturation</label>
+                  <label className="text-[8px] lg:text-[9px] font-bold text-neutral-500 uppercase mb-1 lg:mb-2 block">Saturation</label>
                   <input 
                     type="range" 
                     min="-10" 
