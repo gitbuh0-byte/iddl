@@ -1405,7 +1405,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-semibold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1415,7 +1415,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-semibold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
@@ -1595,21 +1595,10 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="p-2 rounded-full bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 transition border border-red-500/30"
+              className="p-1.5 rounded-full bg-red-600/15 text-red-300 border border-red-500/20 hover:bg-red-600/25 hover:text-red-100 transition"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => {
-                sessionStorage.removeItem("isAuthenticated");
-                setIsAuthenticated(false);
-              }}
-              className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-red-500/30 ml-2"
-              title="Logout"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Logout
             </button>
           </div>
         </div>
@@ -1942,9 +1931,9 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-4">
-            <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center justify-between">
+            <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.25em] flex items-center justify-between">
               Detected Layers
-              <span className="text-neutral-700 font-mono italic">#{selectedFile?.layers.length || 0}</span>
+              <span className="text-[8px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
             
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
@@ -2411,22 +2400,22 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-2.5 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2.5">
-            <h4 className="text-[9px] font-bold text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5">
+          <div className="p-2.5 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2">
+            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em] flex items-center gap-1.5">
               <CreditCard className="w-3 h-3" />
               DL Number Generator
             </h4>
             
-            <div className="space-y-2.5">
+            <div className="space-y-2">
               <div>
-                <label className="text-[8px] font-bold text-neutral-500 uppercase mb-1.5 block">State</label>
+                <label className="text-[7px] font-semibold text-neutral-500 uppercase mb-1 block">State</label>
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="w-full px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded-lg text-[8px] font-semibold text-neutral-300 focus:border-blue-600 focus:outline-none"
+                  className="w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-[9px] font-semibold text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
-                    <option key={state.stateCode} value={state.stateCode}>
+                    <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
                       {state.state} ({state.stateCode}) - {state.format}
                     </option>
                   ))}
@@ -2443,7 +2432,7 @@ export default function App() {
 
               {generatedDLPackages.length > 0 && (
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto">
-                  <p className="text-[8px] text-neutral-600 uppercase font-bold">Generated Packages:</p>
+                  <p className="text-[7px] text-neutral-600 uppercase font-bold">Generated Packages:</p>
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
@@ -2453,7 +2442,7 @@ export default function App() {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="text-[7px] text-neutral-600 uppercase font-bold mb-1">DL #</p>
-                          <code className="text-[8px] font-mono text-neutral-300">
+                          <code className="text-[8px] font-mono text-neutral-300 break-all">
                             {pkg.dlNumber}
                           </code>
                         </div>
