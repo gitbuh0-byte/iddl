@@ -5,7 +5,7 @@ import {
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
   Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
-  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun, MoreHorizontal
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
@@ -82,6 +82,7 @@ export default function App() {
   } | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
+  const [showHeaderMenu, setShowHeaderMenu] = useState(false);
 
   // Text removal state
   const [isRemovingText, setIsRemovingText] = useState(false);
@@ -1134,185 +1135,199 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
+              className="flex items-center gap-1 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-2 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
+            >
+              {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
+              <span>{viewMode === "editor" ? "Preview" : "Editor"}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="flex items-center gap-1 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-2 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+              <span>{theme === "dark" ? "Light" : "Dark"}</span>
+            </button>
+
+            <div className="flex items-center gap-1 bg-[var(--panel)] rounded-full p-1 border border-[var(--panel-border)]">
               <button
-                type="button"
-                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-                className="flex items-center gap-2 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-3 py-2 rounded-full text-[9px] font-bold uppercase transition hover:bg-neutral-700"
-              >
-                {viewMode === "editor" ? <Eye className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
-                {viewMode === "editor" ? "Preview" : "Editor"}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex items-center gap-2 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-3 py-2 rounded-full text-[9px] font-bold uppercase transition hover:bg-neutral-700"
-              >
-                {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
-                {theme === "dark" ? "Light" : "Dark"}
-              </button>
-            </div>
-            {/* Layer Type Selector */}
-            <div className="flex bg-[var(--panel)] rounded-lg p-1 border border-[var(--panel-border)]">
-              <button 
-                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-neutral-400 hover:text-white"}`}
-                title="Draw face area"
-              >
-                <User className="w-3.5 h-3.5" />
-              </button>
-              <button 
-                onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white shadow-lg shadow-red-500/20" : "text-neutral-400 hover:text-white"}`}
-                title="Draw text area"
-              >
-                <FileText className="w-3.5 h-3.5" />
-              </button>
-              <button 
-                onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white shadow-lg shadow-purple-500/20" : "text-neutral-400 hover:text-white"}`}
-                title="Draw signature area"
-              >
-                <Eraser className="w-3.5 h-3.5" />
-              </button>
-              <button 
-                onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white shadow-lg shadow-green-500/20" : "text-neutral-400 hover:text-white"}`}
-                title="Draw code area"
-              >
-                <Code className="w-3.5 h-3.5" />
-              </button>
-              <div className="w-px bg-neutral-700 mx-1" />
-              <button 
-                onClick={() => setEditMode(null)}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
                 title="Pointer mode"
+                onClick={() => setEditMode(null)}
+                className={`p-1 rounded-full transition ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <MousePointer2 className="w-3.5 h-3.5" />
+                <MousePointer2 className="w-4 h-4" />
               </button>
-              <button 
+              <button
+                title="Face region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
+                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
+              >
+                <User className="w-4 h-4" />
+              </button>
+              <button
+                title="Text region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
+                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white" : "text-neutral-400 hover:text-white"}`}
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+              <button
+                title="Signature region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
+                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
+              >
+                <Eraser className="w-4 h-4" />
+              </button>
+              <button
+                title="Code region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
+                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white" : "text-neutral-400 hover:text-white"}`}
+              >
+                <Code className="w-4 h-4" />
+              </button>
+              <button
+                title="Remove text"
                 onClick={() => setIsRemovingText(!isRemovingText)}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20" : "text-neutral-400 hover:text-white"}`}
-                title="Remove text with inpainting"
+                className={`p-1 rounded-full transition disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Wand2 className="w-3.5 h-3.5" />
+                <Wand2 className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="h-6 w-px bg-neutral-800 mx-1" />
+            <button
+              title="Add overlay image"
+              onClick={openOverlayImagePicker}
+              disabled={!selectedFile}
+              className="p-2 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+            >
+              <Upload className="w-4 h-4" />
+            </button>
 
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => addTextLayer("New Text")}
-                  disabled={!selectedFile}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Add Text
-                </button>
-                <button
-                  type="button"
-                  onClick={() => addSignatureLayer()}
-                  disabled={!selectedFile}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <Eraser className="w-3.5 h-3.5" />
-                  Signature
-                </button>
-                <button
-                  type="button"
-                  onClick={openOverlayImagePicker}
-                  disabled={!selectedFile}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Overlay
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={copyLayer}
-                  disabled={!selectedLayer}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  Copy
-                </button>
-                <button
-                  type="button"
-                  onClick={cutLayer}
-                  disabled={!selectedLayer}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  Cut
-                </button>
-                <button
-                  type="button"
-                  onClick={pasteLayer}
-                  disabled={!clipboardLayer || !selectedFile}
-                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-                >
-                  <Clipboard className="w-3.5 h-3.5" />
-                  Paste
-                </button>
-              </div>
-            </div>
-
-            {/* Export Buttons */}
-            <div className="flex gap-2">
+            <div className="relative">
               <button
                 type="button"
-                onClick={handleUndo}
-                disabled={!canUndo}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                onClick={() => setShowHeaderMenu((prev) => !prev)}
+                className="p-2 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+                title="More actions"
               >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Undo
+                <MoreHorizontal className="w-4 h-4" />
               </button>
-              <button
-                type="button"
-                onClick={handleRedo}
-                disabled={!canRedo}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-                Redo
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => exportAsset("png")}
-                disabled={!selectedFile || isExporting}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-              >
-                {isExporting && exportFormat === "png" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                PNG
-              </button>
-              <button 
-                onClick={() => exportAsset("jpg")}
-                disabled={!selectedFile || isExporting}
-                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
-              >
-                {isExporting && exportFormat === "jpg" ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-                JPG
-              </button>
-              <button 
-                onClick={() => exportAsset("psd")}
-                disabled={!selectedFile || isExporting}
-                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all shadow-lg shadow-blue-500/20"
-              >
-                {isExporting && exportFormat === "psd" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
-                PSD
-              </button>
+              {showHeaderMenu && (
+                <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-[var(--surface)] border border-[var(--panel-border)] shadow-2xl p-2 z-50">
+                  <div className="grid grid-cols-2 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => addTextLayer("New Text")}
+                      disabled={!selectedFile}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addSignatureLayer()}
+                      disabled={!selectedFile}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <Eraser className="w-3.5 h-3.5" />
+                      Sign
+                    </button>
+                    <button
+                      type="button"
+                      onClick={copyLayer}
+                      disabled={!selectedLayer}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cutLayer}
+                      disabled={!selectedLayer}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Cut
+                    </button>
+                    <button
+                      type="button"
+                      onClick={pasteLayer}
+                      disabled={!clipboardLayer || !selectedFile}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <Clipboard className="w-3.5 h-3.5" />
+                      Paste
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleUndo}
+                      disabled={!canUndo}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      Undo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRedo}
+                      disabled={!canRedo}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      Redo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportAsset("png")}
+                      disabled={!selectedFile || isExporting}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      PNG
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportAsset("jpg")}
+                      disabled={!selectedFile || isExporting}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      JPG
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => exportAsset("psd")}
+                      disabled={!selectedFile || isExporting}
+                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-blue-600 text-[10px] font-bold uppercase border border-blue-500 text-white hover:bg-blue-500 disabled:opacity-50"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      PSD
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Logout Button */}
+            <button
+              onClick={() => {
+                sessionStorage.removeItem("isAuthenticated");
+                setIsAuthenticated(false);
+              }}
+              className="p-2 rounded-full bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 transition border border-red-500/30"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
             <button
               onClick={() => {
                 sessionStorage.removeItem("isAuthenticated");
@@ -1483,99 +1498,6 @@ export default function App() {
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-4">
-              <div className="space-y-4 p-4 rounded-3xl bg-[var(--panel)] border border-[var(--panel-border)]">
-                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Image Crop</h4>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">X Offset</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={selectedFile.crop?.x ?? 0}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        updateFilesWithHistory(prev => prev.map(f => {
-                          if (f.id !== selectedFileId) return f;
-                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
-                          return { ...f, crop: { ...crop, x: value } };
-                        }));
-                      }}
-                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
-                    />
-                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.x ?? 0) * 100).toFixed(0)}%</span>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Y Offset</label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={selectedFile.crop?.y ?? 0}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        updateFilesWithHistory(prev => prev.map(f => {
-                          if (f.id !== selectedFileId) return f;
-                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
-                          return { ...f, crop: { ...crop, y: value } };
-                        }));
-                      }}
-                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
-                    />
-                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.y ?? 0) * 100).toFixed(0)}%</span>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Crop Width</label>
-                    <input
-                      type="range"
-                      min="0.2"
-                      max="1"
-                      step="0.01"
-                      value={selectedFile.crop?.width ?? 1}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        updateFilesWithHistory(prev => prev.map(f => {
-                          if (f.id !== selectedFileId) return f;
-                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
-                          return { ...f, crop: { ...crop, width: value } };
-                        }));
-                      }}
-                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
-                    />
-                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.width ?? 1) * 100).toFixed(0)}%</span>
-                  </div>
-                  <div>
-                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Crop Height</label>
-                    <input
-                      type="range"
-                      min="0.2"
-                      max="1"
-                      step="0.01"
-                      value={selectedFile.crop?.height ?? 1}
-                      onChange={(e) => {
-                        const value = Number(e.target.value);
-                        updateFilesWithHistory(prev => prev.map(f => {
-                          if (f.id !== selectedFileId) return f;
-                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
-                          return { ...f, crop: { ...crop, height: value } };
-                        }));
-                      }}
-                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
-                    />
-                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.height ?? 1) * 100).toFixed(0)}%</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => updateFilesWithHistory(prev => prev.map(f => f.id === selectedFileId ? { ...f, crop: { x: 0, y: 0, width: 1, height: 1 } } : f))}
-                  className="w-full rounded-xl py-2 text-[9px] font-bold uppercase bg-blue-500/20 border border-blue-500 text-blue-200 hover:bg-blue-500/30 transition"
-                >
-                  Reset Crop
-                </button>
-              </div>
-
               <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
               
               <div className="space-y-3">
