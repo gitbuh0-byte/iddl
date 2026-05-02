@@ -115,18 +115,18 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
-                className="text-4xl font-black mb-2 bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent tracking-wider"
+                className="text-4xl font-black mb-2 bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent tracking-tight"
               >
-                TRY YOUR LUCK
+                Welcome
               </motion.h1>
               
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                className="text-purple-300/70 text-sm font-mono tracking-widest"
+                className="text-gray-400 text-sm font-normal tracking-normal"
               >
-                &gt; SECURE_ACCESS_REQUIRED
+                Sign in to your account
               </motion.p>
             </div>
 
@@ -138,8 +138,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.5 }}
               >
-                <label htmlFor="username" className="block text-xs font-bold text-purple-400/80 mb-3 tracking-widest">
-                  ACCESS_CODE
+                <label htmlFor="username" className="block text-xs font-semibold text-gray-300 mb-3 tracking-normal">
+                  Username
                 </label>
                 <div className="relative group">
                   <input
@@ -148,8 +148,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="ENTER_CREDENTIALS..."
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur border border-purple-400/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus:bg-white/20 transition-all duration-300 text-white placeholder-purple-400/30 font-mono text-sm"
+                    placeholder="Enter your username"
+                    className="w-full px-4 py-3 bg-white/5 backdrop-blur border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus:bg-white/10 transition-all duration-300 text-white placeholder-gray-500 text-sm"
                     disabled={isLoading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/0 via-transparent to-blue-500/0 group-focus-within:from-purple-500/10 group-focus-within:to-blue-500/10 pointer-events-none transition-all duration-300" />
@@ -162,8 +162,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.6 }}
               >
-                <label htmlFor="password" className="block text-xs font-bold text-blue-400/80 mb-3 tracking-widest">
-                  SECURITY_PROTOCOL
+                <label htmlFor="password" className="block text-xs font-semibold text-gray-300 mb-3 tracking-normal">
+                  Password
                 </label>
                 <div className="relative group">
                   <input
@@ -172,8 +172,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    placeholder="ENTER_PASSKEY..."
-                    className="w-full px-4 py-3 bg-white/10 backdrop-blur border border-blue-400/50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent focus:bg-white/20 transition-all duration-300 text-white placeholder-blue-400/30 font-mono text-sm pr-12"
+                    placeholder="Enter your password"
+                    className="w-full px-4 py-3 bg-white/5 backdrop-blur border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus:bg-white/10 transition-all duration-300 text-white placeholder-gray-500 text-sm pr-12"
                     disabled={isLoading}
                   />
                   <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/0 via-transparent to-purple-500/0 group-focus-within:from-blue-500/10 group-focus-within:to-purple-500/10 pointer-events-none transition-all duration-300" />

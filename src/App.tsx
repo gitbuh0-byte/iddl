@@ -115,12 +115,10 @@ export default function App() {
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
 
   const fontFamilies = [
-    { label: "Orbitron", value: "Orbitron, sans-serif" },
-    { label: "Space Mono", value: "Space Mono, monospace" },
-    { label: "Audiowide", value: "Audiowide, sans-serif" },
-    { label: "Michroma", value: "Michroma, sans-serif" },
-    { label: "Major Mono Display", value: "Major Mono Display, monospace" },
-    { label: "Electrolize", value: "Electrolize, sans-serif" },
+    { label: "Inter", value: "Inter, system-ui, sans-serif" },
+    { label: "Syne", value: "Syne, sans-serif" },
+    { label: "Roboto", value: "Roboto, sans-serif" },
+    { label: "Montserrat", value: "Montserrat, sans-serif" },
     { label: "Pacifico (Signature)", value: "Pacifico, cursive" },
     { label: "Great Vibes (Signature)", value: "Great Vibes, cursive" },
     { label: "Caveat (Signature)", value: "Caveat, cursive" },
@@ -206,10 +204,10 @@ export default function App() {
       locked: false,
       opacity: 1,
       text,
-      textColor: "#00f0ff",
-      fontFamily: "Orbitron, sans-serif",
+      textColor: "#ffffff",
+      fontFamily: "Great Vibes, cursive",
       fontSize: 46,
-      fontWeight: "700",
+      fontWeight: "400",
       fontStyle: "normal",
     };
 
@@ -313,10 +311,10 @@ export default function App() {
       locked: false,
       opacity: 1,
       text,
-      textColor: "#00f0ff",
-      fontFamily: "Space Mono, monospace",
+      textColor: "#ffffff",
+      fontFamily: "Inter, system-ui, sans-serif",
       fontSize: 32,
-      fontWeight: "700",
+      fontWeight: "600",
       fontStyle: "normal",
     };
 
