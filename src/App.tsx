@@ -1385,8 +1385,8 @@ export default function App() {
       ) : (
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-neutral-800 bg-[var(--bg)] z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-3 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <header className="border-b border-neutral-800/60 bg-[var(--bg)]/95 backdrop-blur-sm z-50 shrink-0">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-2xl bg-slate-950 border border-neutral-700 flex items-center justify-center">
               <ImageIcon className="w-4 h-4 text-white" />
@@ -1397,7 +1397,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-1 rounded-full border border-neutral-700 bg-[#0f172a] px-2 py-0.5 text-[8px] uppercase tracking-[0.25em] text-neutral-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/80 bg-neutral-950/80 px-2 py-1 text-[8px] uppercase tracking-[0.3em] text-neutral-400">
               <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
               <span>{openCVLoaded ? 'OpenCV Ready' : 'Loading...'}</span>
             </div>
@@ -1405,7 +1405,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.08em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1415,7 +1415,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.08em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-2 py-0.5 rounded-full text-[7px] font-semibold uppercase tracking-[0.15em] transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
@@ -1487,13 +1487,13 @@ export default function App() {
                 <MoreHorizontal className="w-3 h-3" />
               </button>
               {showHeaderMenu && (
-                <div className="absolute right-0 mt-2 w-44 rounded-2xl bg-[#111827] border border-neutral-700 shadow-lg p-1 z-50">
+                <div className="absolute right-0 mt-2 w-52 rounded-3xl bg-[var(--surface)]/95 border border-[var(--panel-border)] shadow-2xl p-1.5 z-50">
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
                       onClick={() => addTextLayer("New Text")}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-900 text-[9px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Text
@@ -1502,7 +1502,7 @@ export default function App() {
                       type="button"
                       onClick={() => addSignatureLayer()}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-900 text-[9px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Eraser className="w-3.5 h-3.5" />
                       Sign
@@ -1511,7 +1511,7 @@ export default function App() {
                       type="button"
                       onClick={copyLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-900 text-[9px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       Copy
@@ -1520,7 +1520,7 @@ export default function App() {
                       type="button"
                       onClick={cutLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-900 text-[9px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Cut
@@ -1529,7 +1529,7 @@ export default function App() {
                       type="button"
                       onClick={pasteLayer}
                       disabled={!clipboardLayer || !selectedFile}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-neutral-900 text-[9px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Clipboard className="w-3.5 h-3.5" />
                       Paste
@@ -1595,7 +1595,7 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="p-1 rounded-full bg-red-600/15 text-red-300 border border-red-500/25 hover:bg-red-600/25 hover:text-red-100 transition"
+              className="p-1.5 rounded-full bg-red-600/15 text-red-300 border border-red-500/20 hover:bg-red-600/25 hover:text-red-100 transition"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -1783,7 +1783,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800 bg-[#0b1221] p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/30 bg-[var(--surface)]/90 p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-2">
@@ -1931,27 +1931,27 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-4">
-            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center justify-between">
+            <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.25em] flex items-center justify-between">
               Detected Layers
-              <span className="text-[7px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
+              <span className="text-[8px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
             
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
               {selectedFile?.layers.length === 0 ? (
-                <div className="p-4 rounded-xl bg-[#111827] border border-dashed border-neutral-700 flex flex-col items-center justify-center text-center">
-                  <Layers className="w-5 h-5 text-neutral-500 mb-2" />
-                  <p className="text-[8px] text-neutral-500 font-semibold uppercase tracking-[0.2em]">No layers detected</p>
-                  <p className="text-[7px] text-neutral-500 mt-1">Draw areas or upload a new photo</p>
+                <div className="p-6 rounded-2xl bg-[var(--panel)]/80 border border-dashed border-[var(--panel-border)] flex flex-col items-center justify-center text-center">
+                  <Layers className="w-6 h-6 text-neutral-700 mb-3" />
+                  <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-tight">No layers detected</p>
+                  <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
                 </div>
               ) : (
                 selectedFile?.layers.map((layer: Layer) => (
                   <div 
                     key={layer.id}
                     onClick={() => setSelectedLayerId(layer.id)}
-                    className={`group flex items-center gap-3 p-2.5 rounded-xl transition-all border cursor-pointer ${
+                    className={`group flex items-center gap-3 p-3 rounded-xl transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
                         ? "bg-neutral-800 border-neutral-700" 
-                        : "bg-[#111827] border-neutral-700 hover:border-neutral-500"
+                        : "bg-[var(--panel)]/90 border-[var(--panel-border)] hover:border-[var(--text)]/20"
                     }`}
                   >
                     <div className={`p-2 rounded-lg flex-shrink-0 ${
@@ -2400,7 +2400,7 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-2 rounded-xl bg-[#0f172a] border border-neutral-700/50 space-y-2">
+          <div className="p-2.5 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2">
             <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em] flex items-center gap-1.5">
               <CreditCard className="w-3 h-3" />
               DL Number Generator
@@ -2424,7 +2424,7 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/25"
+                className="w-full flex items-center justify-center gap-1 py-1 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
               >
                 <RefreshCw className="w-3 h-3" />
                 Generate
