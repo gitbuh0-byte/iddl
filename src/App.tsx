@@ -83,6 +83,13 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [canvasLayout, setCanvasLayout] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [layerResizeInfo, setLayerResizeInfo] = useState<{
+    anchor: "nw" | "ne" | "se" | "sw";
+    start: { x: number; y: number };
+    layer: Layer;
+    crop: { x: number; y: number; width: number; height: number };
+  } | null>(null);
 
   // Text removal state
   const [isRemovingText, setIsRemovingText] = useState(false);
@@ -130,6 +137,53 @@ export default function App() {
   const updateSelectedLayer = (updates: Partial<Layer>) => {
     if (!selectedLayer) return;
     updateLayer(selectedLayer.id, updates);
+  };
+
+  const getLayerDisplayRect = (layer: Layer) => {
+    if (!selectedFile || !canvasLayout.width || !canvasLayout.height) return null;
+    const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+    const cropWidth = fileCrop.width || 1;
+    const cropHeight = fileCrop.height || 1;
+    const relativeX = (layer.x - fileCrop.x) / cropWidth;
+    const relativeY = (layer.y - fileCrop.y) / cropHeight;
+    const relativeW = layer.width / cropWidth;
+    const relativeH = layer.height / cropHeight;
+
+    return {
+      x: relativeX * canvasLayout.width,
+      y: relativeY * canvasLayout.height,
+      width: relativeW * canvasLayout.width,
+      height: relativeH * canvasLayout.height,
+    };
+  };
+
+  const getTopLayerAtPoint = (x: number, y: number) => {
+    if (!selectedFile) return null;
+    return [...selectedFile.layers].reverse().find((layer) => {
+      if (!layer.visible) return false;
+      const rect = getLayerDisplayRect(layer);
+      return rect ? x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height : false;
+    }) || null;
+  };
+
+  const getResizeHandleAtPoint = (layer: Layer, x: number, y: number) => {
+    const rect = getLayerDisplayRect(layer);
+    if (!rect) return null;
+    const handleSize = 12;
+    const corners = {
+      nw: { x: rect.x, y: rect.y },
+      ne: { x: rect.x + rect.width, y: rect.y },
+      sw: { x: rect.x, y: rect.y + rect.height },
+      se: { x: rect.x + rect.width, y: rect.y + rect.height },
+    } as const;
+
+    for (const anchor of ["nw", "ne", "sw", "se"] as const) {
+      const point = corners[anchor];
+      if (Math.abs(x - point.x) <= handleSize && Math.abs(y - point.y) <= handleSize) {
+        return anchor;
+      }
+    }
+    return null;
   };
 
   const addSignatureLayer = (text = "Your Signature") => {
@@ -693,29 +747,72 @@ export default function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  useEffect(() => {
+    const updateLayout = () => {
+      if (!canvasRef.current) return;
+      const rect = canvasRef.current.getBoundingClientRect();
+      setCanvasLayout({ width: rect.width, height: rect.height });
+    };
+
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateLayout) : null;
+    if (observer && canvasRef.current) observer.observe(canvasRef.current);
+
+    return () => {
+      window.removeEventListener("resize", updateLayout);
+      if (observer && canvasRef.current) observer.disconnect();
+    };
+  }, [selectedFile]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !selectedFile) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / canvasRef.current.width;
-    const y = (e.clientY - rect.top) / canvasRef.current.height;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
 
-    if (!editMode && selectedLayer && !selectedLayer.locked && selectedFile) {
-      const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
-      const cropWidth = fileCrop.width || 1;
-      const cropHeight = fileCrop.height || 1;
-      const displayStartX = (selectedLayer.x - fileCrop.x) / cropWidth;
-      const displayStartY = (selectedLayer.y - fileCrop.y) / cropHeight;
+    const clickedLayer = getTopLayerAtPoint(x * canvasLayout.width, y * canvasLayout.height);
+    if (clickedLayer) {
+      if (selectedLayerId !== clickedLayer.id) {
+        setSelectedLayerId(clickedLayer.id);
+      }
 
-      pushSnapshot();
-      clearRedoStack();
-      setSelectedLayerDrag({
-        layerId: selectedLayer.id,
-        origin: { x, y },
-        start: { x: displayStartX, y: displayStartY },
-        crop: fileCrop,
-      });
-      setIsDragging(true);
-      return;
+      if (!clickedLayer.locked && clickedLayer.type === "image") {
+        const handle = getResizeHandleAtPoint(clickedLayer, x * canvasLayout.width, y * canvasLayout.height);
+        if (handle) {
+          const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+          pushSnapshot();
+          clearRedoStack();
+          setLayerResizeInfo({
+            anchor: handle,
+            start: { x, y },
+            layer: clickedLayer,
+            crop: fileCrop,
+          });
+          setIsDragging(true);
+          return;
+        }
+      }
+
+      if (!editMode && !clickedLayer.locked) {
+        const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+        const cropWidth = fileCrop.width || 1;
+        const cropHeight = fileCrop.height || 1;
+        const displayStartX = (clickedLayer.x - fileCrop.x) / cropWidth;
+        const displayStartY = (clickedLayer.y - fileCrop.y) / cropHeight;
+
+        pushSnapshot();
+        clearRedoStack();
+        setSelectedLayerDrag({
+          layerId: clickedLayer.id,
+          origin: { x, y },
+          start: { x: displayStartX, y: displayStartY },
+          crop: fileCrop,
+        });
+        setIsDragging(true);
+        return;
+      }
     }
 
     if (!editMode || !drawingLayer) return;
@@ -728,9 +825,48 @@ export default function App() {
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDragging || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / canvasRef.current.width;
-    const y = (e.clientY - rect.top) / canvasRef.current.height;
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
     setCurrentDrag({ x, y });
+
+    if (layerResizeInfo && selectedFile) {
+      const fileCrop = layerResizeInfo.crop || selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+      const cropWidth = fileCrop.width || 1;
+      const cropHeight = fileCrop.height || 1;
+      const dx = x - layerResizeInfo.start.x;
+      const dy = y - layerResizeInfo.start.y;
+      const original = layerResizeInfo.layer;
+      const updates: Partial<Layer> = {};
+
+      if (layerResizeInfo.anchor === "se") {
+        updates.width = Math.max(0.05, original.width + dx * cropWidth);
+        updates.height = Math.max(0.05, original.height + dy * cropHeight);
+      } else if (layerResizeInfo.anchor === "sw") {
+        updates.x = Math.min(1 - original.width, Math.max(0, original.x + dx * cropWidth));
+        updates.width = Math.max(0.05, original.width - dx * cropWidth);
+        updates.height = Math.max(0.05, original.height + dy * cropHeight);
+      } else if (layerResizeInfo.anchor === "ne") {
+        updates.y = Math.min(1 - original.height, Math.max(0, original.y + dy * cropHeight));
+        updates.width = Math.max(0.05, original.width + dx * cropWidth);
+        updates.height = Math.max(0.05, original.height - dy * cropHeight);
+      } else if (layerResizeInfo.anchor === "nw") {
+        updates.x = Math.min(1 - original.width, Math.max(0, original.x + dx * cropWidth));
+        updates.y = Math.min(1 - original.height, Math.max(0, original.y + dy * cropHeight));
+        updates.width = Math.max(0.05, original.width - dx * cropWidth);
+        updates.height = Math.max(0.05, original.height - dy * cropHeight);
+      }
+
+      setFiles((prev) => prev.map((file) => {
+        if (file.id !== selectedFileId) return file;
+        return {
+          ...file,
+          layers: file.layers.map((layer) =>
+            layer.id === layerResizeInfo.layer.id ? { ...layer, ...updates } : layer
+          ),
+        };
+      }));
+      return;
+    }
 
     if (selectedLayerDrag && selectedFile) {
       const draggedLayer = selectedFile.layers.find((layer) => layer.id === selectedLayerDrag.layerId);
@@ -765,6 +901,14 @@ export default function App() {
   const handleMouseUp = () => {
     if (selectedLayerDrag) {
       setSelectedLayerDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
+    if (layerResizeInfo) {
+      setLayerResizeInfo(null);
       setIsDragging(false);
       setDragStart(null);
       setCurrentDrag(null);
@@ -1421,6 +1565,32 @@ export default function App() {
                 onMouseLeave={handleMouseUp}
                 className={`w-full block h-auto ${editMode ? "cursor-crosshair" : "cursor-default"}`}
               />
+              {selectedLayer?.type === "image" && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
+                const rect = getLayerDisplayRect(selectedLayer);
+                if (!rect) return null;
+                const handles = [
+                  { key: "nw", left: rect.x, top: rect.y },
+                  { key: "ne", left: rect.x + rect.width, top: rect.y },
+                  { key: "sw", left: rect.x, top: rect.y + rect.height },
+                  { key: "se", left: rect.x + rect.width, top: rect.y + rect.height },
+                ];
+
+                return (
+                  <div className="absolute inset-0 pointer-events-none">
+                    <div
+                      className="absolute rounded-xl border border-blue-500/70"
+                      style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+                    />
+                    {handles.map((handle) => (
+                      <div
+                        key={handle.key}
+                        className="absolute w-3 h-3 rounded-full bg-blue-500 border-2 border-white shadow-lg"
+                        style={{ left: handle.left, top: handle.top, transform: "translate(-50%, -50%)" }}
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
               
               <AnimatePresence>
                 {selectedFile.isAnalyzing && (
