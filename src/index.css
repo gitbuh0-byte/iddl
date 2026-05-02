@@ -78,12 +78,38 @@ select {
   font: inherit;
 }
 
+button {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+input,
+textarea,
+select {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
+}
+
+button:focus,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  box-shadow: none;
+}
+
 ::selection {
   background: rgba(0, 217, 255, 0.2);
   color: var(--text);
 }
 
-/* Glassmorphism base styling */
+/* Minimal headings */
 h1, h2, h3, h4, h5, h6 {
   font-family: "Syne", sans-serif;
   font-weight: 700;
@@ -96,68 +122,29 @@ h2 { font-size: 2rem; }
 h3 { font-size: 1.5rem; }
 h4 { font-size: 1.25rem; }
 
-/* Glassmorphism components */
+/* Minimal panels */
 .glass, .panel, .surface {
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .glass:hover, .panel:hover {
-  background: var(--surface-hover);
-  border-color: var(--border);
-  transition: all 0.3s ease;
+  background: transparent;
+  border-color: transparent;
+  transition: none;
 }
 
-/* Buttons with glassmorphism */
-button {
-  background: var(--surface-strong);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 1.25rem;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  color: var(--text);
+/* Option styling */
+select, option {
+  background: #111827;
+  color: #f8fafc;
 }
 
-button:hover {
-  background: var(--surface-hover);
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 217, 255, 0.1);
-}
-
-button:active {
-  transform: translateY(0);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Inputs with glassmorphism */
-input, textarea, select {
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border-light);
-  border-radius: 8px;
-  padding: 0.75rem;
-  transition: all 0.3s ease;
-}
-
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: var(--surface-strong);
-  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+.option-hidden {
+  color: #f8fafc;
 }
 
 /* Scrollbar styling */
