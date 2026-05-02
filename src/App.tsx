@@ -5,7 +5,7 @@ import {
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
   Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
-  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
@@ -43,6 +43,7 @@ interface Layer {
 }
 
 interface ManagedFile {
+  crop?: { x: number; y: number; width: number; height: number };
   id: string;
   name: string;
   originalUrl: string;
@@ -73,6 +74,13 @@ export default function App() {
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [currentDrag, setCurrentDrag] = useState<{ x: number, y: number } | null>(null);
   const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
+  const [selectedLayerDrag, setSelectedLayerDrag] = useState<{
+    layerId: string;
+    origin: { x: number; y: number };
+    start: { x: number; y: number };
+  } | null>(null);
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
 
   // Text removal state
   const [isRemovingText, setIsRemovingText] = useState(false);
@@ -347,6 +355,7 @@ export default function App() {
         name: f.name,
         originalUrl: URL.createObjectURL(f),
         inpaintedUrl: null,
+        crop: { x: 0, y: 0, width: 1, height: 1 },
         layers: [],
         analysis: null,
         isAnalyzing: true,
@@ -513,9 +522,15 @@ export default function App() {
         canvas.width = targetWidth;
         canvas.height = targetWidth / ratio;
 
+        const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+        const sx = Math.max(0, Math.min(img.width, fileCrop.x * img.width));
+        const sy = Math.max(0, Math.min(img.height, fileCrop.y * img.height));
+        const sw = Math.max(1, Math.min(img.width - sx, fileCrop.width * img.width));
+        const sh = Math.max(1, Math.min(img.height - sy, fileCrop.height * img.height));
+
         // Apply adjustments
         ctx.filter = `brightness(${1 + selectedFile.adjustments.brightness * 0.1}) contrast(${1 + selectedFile.adjustments.contrast * 0.1}) saturate(${1 + selectedFile.adjustments.saturation * 0.1})`;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
         ctx.filter = "none";
 
         // Draw layers
@@ -666,12 +681,30 @@ export default function App() {
       });
   }, []);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!editMode || !canvasRef.current) return;
+    if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / canvasRef.current.width;
     const y = (e.clientY - rect.top) / canvasRef.current.height;
-    
+
+    if (!editMode && selectedLayer && !selectedLayer.locked) {
+      pushSnapshot();
+      clearRedoStack();
+      setSelectedLayerDrag({
+        layerId: selectedLayer.id,
+        origin: { x, y },
+        start: { x: selectedLayer.x, y: selectedLayer.y },
+      });
+      setIsDragging(true);
+      return;
+    }
+
+    if (!editMode || !drawingLayer) return;
+
     setDragStart({ x, y });
     setCurrentDrag({ x, y });
     setIsDragging(true);
@@ -683,11 +716,40 @@ export default function App() {
     const x = (e.clientX - rect.left) / canvasRef.current.width;
     const y = (e.clientY - rect.top) / canvasRef.current.height;
     setCurrentDrag({ x, y });
+
+    if (selectedLayerDrag && selectedFile) {
+      const deltaX = x - selectedLayerDrag.origin.x;
+      const deltaY = y - selectedLayerDrag.origin.y;
+      const updatedLayerX = Math.max(0, Math.min(1 - (selectedLayer?.width ?? 0), selectedLayerDrag.start.x + deltaX));
+      const updatedLayerY = Math.max(0, Math.min(1 - (selectedLayer?.height ?? 0), selectedLayerDrag.start.y + deltaY));
+
+      setFiles((prev) => prev.map((file) => {
+        if (file.id !== selectedFileId) return file;
+        return {
+          ...file,
+          layers: file.layers.map((layer) =>
+            layer.id === selectedLayerDrag.layerId ? { ...layer, x: updatedLayerX, y: updatedLayerY } : layer
+          ),
+        };
+      }));
+
+      return;
+    }
   };
 
   const handleMouseUp = () => {
+    if (selectedLayerDrag) {
+      setSelectedLayerDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
     if (!isDragging || !dragStart || !currentDrag || !editMode || !selectedFile || !drawingLayer) {
       setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
       return;
     }
 
@@ -1020,9 +1082,9 @@ export default function App() {
       {!isAuthenticated ? (
         <Login onLoginSuccess={() => setIsAuthenticated(true)} />
       ) : (
-        <div className="min-h-screen bg-[#050505] text-neutral-100 font-sans selection:bg-blue-500/30 flex flex-col h-screen overflow-hidden">
+        <div data-theme={theme} className="min-h-screen bg-[#050505] text-neutral-100 font-sans selection:bg-blue-500/30 flex flex-col h-screen overflow-hidden">
       {/* Header */}
-      <header className="border-b border-neutral-800/50 bg-[#0a0a0a]/80 backdrop-blur-xl z-50 shrink-0">
+      <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
         <div className="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
@@ -1044,8 +1106,26 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
+                className="flex items-center gap-2 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-3 py-2 rounded-full text-[9px] font-bold uppercase transition hover:bg-neutral-700"
+              >
+                {viewMode === "editor" ? <Eye className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
+                {viewMode === "editor" ? "Preview" : "Editor"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="flex items-center gap-2 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-3 py-2 rounded-full text-[9px] font-bold uppercase transition hover:bg-neutral-700"
+              >
+                {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                {theme === "dark" ? "Light" : "Dark"}
+              </button>
+            </div>
             {/* Layer Type Selector */}
-            <div className="flex bg-neutral-900/50 rounded-lg p-1 border border-neutral-800">
+            <div className="flex bg-[var(--panel)] rounded-lg p-1 border border-[var(--panel-border)]">
               <button 
                 onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[9px] font-bold uppercase transition-all ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-neutral-400 hover:text-white"}`}
@@ -1222,10 +1302,10 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar: File Browser */}
-        <div className="w-72 border-r border-neutral-800/50 bg-[#080808] flex flex-col shrink-0">
+        <div className={`${viewMode === "preview" ? "hidden" : "w-72 border-r border-[var(--panel-border)] bg-[var(--surface)] flex flex-col shrink-0"}`}>
           <div className="p-4 border-b border-neutral-800/50 flex items-center justify-between">
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Photo Library</span>
-            <span className="bg-neutral-900 border border-neutral-800 text-[10px] text-neutral-400 px-2 py-0.5 rounded font-mono">{files.length}/4</span>
+            <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[10px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -1370,10 +1450,103 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments */}
-        <div className="w-80 border-l border-neutral-800/50 bg-[#080808] p-6 space-y-8 shrink-0 overflow-y-auto">
+        <div className={`${viewMode === "preview" ? "hidden" : "w-80 border-l border-[var(--panel-border)] bg-[var(--surface)] p-6 space-y-8 shrink-0 overflow-y-auto"}`}>
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-4">
+              <div className="space-y-4 p-4 rounded-3xl bg-[var(--panel)] border border-[var(--panel-border)]">
+                <h4 className="text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em]">Image Crop</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">X Offset</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.x ?? 0}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        updateFilesWithHistory(prev => prev.map(f => {
+                          if (f.id !== selectedFileId) return f;
+                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
+                          return { ...f, crop: { ...crop, x: value } };
+                        }));
+                      }}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.x ?? 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Y Offset</label>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.y ?? 0}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        updateFilesWithHistory(prev => prev.map(f => {
+                          if (f.id !== selectedFileId) return f;
+                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
+                          return { ...f, crop: { ...crop, y: value } };
+                        }));
+                      }}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.y ?? 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Crop Width</label>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.width ?? 1}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        updateFilesWithHistory(prev => prev.map(f => {
+                          if (f.id !== selectedFileId) return f;
+                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
+                          return { ...f, crop: { ...crop, width: value } };
+                        }));
+                      }}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.width ?? 1) * 100).toFixed(0)}%</span>
+                  </div>
+                  <div>
+                    <label className="text-[9px] font-bold text-neutral-500 uppercase mb-2 block">Crop Height</label>
+                    <input
+                      type="range"
+                      min="0.2"
+                      max="1"
+                      step="0.01"
+                      value={selectedFile.crop?.height ?? 1}
+                      onChange={(e) => {
+                        const value = Number(e.target.value);
+                        updateFilesWithHistory(prev => prev.map(f => {
+                          if (f.id !== selectedFileId) return f;
+                          const crop = f.crop || { x: 0, y: 0, width: 1, height: 1 };
+                          return { ...f, crop: { ...crop, height: value } };
+                        }));
+                      }}
+                      className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    />
+                    <span className="text-[8px] text-neutral-500">{((selectedFile.crop?.height ?? 1) * 100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => updateFilesWithHistory(prev => prev.map(f => f.id === selectedFileId ? { ...f, crop: { x: 0, y: 0, width: 1, height: 1 } } : f))}
+                  className="w-full rounded-xl py-2 text-[9px] font-bold uppercase bg-blue-500/20 border border-blue-500 text-blue-200 hover:bg-blue-500/30 transition"
+                >
+                  Reset Crop
+                </button>
+              </div>
+
               <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Adjustments</h4>
               
               <div className="space-y-3">
@@ -1435,7 +1608,7 @@ export default function App() {
             
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
               {selectedFile?.layers.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-neutral-900/30 border border-dashed border-neutral-800 flex flex-col items-center justify-center text-center">
+                <div className="p-6 rounded-2xl bg-[var(--panel)]/80 border border-dashed border-[var(--panel-border)] flex flex-col items-center justify-center text-center">
                   <Layers className="w-6 h-6 text-neutral-700 mb-3" />
                   <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-tight">No layers detected</p>
                   <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
@@ -1448,7 +1621,7 @@ export default function App() {
                     className={`group flex items-center gap-3 p-3 rounded-xl transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
                         ? "bg-neutral-800 border-neutral-700" 
-                        : "bg-neutral-900/50 border-neutral-800 hover:border-neutral-700"
+                        : "bg-[var(--panel)]/90 border-[var(--panel-border)] hover:border-[var(--text)]/20"
                     }`}
                   >
                     <div className={`p-2 rounded-lg flex-shrink-0 ${
@@ -1897,7 +2070,7 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 space-y-4">
+          <div className="p-4 rounded-xl bg-[var(--panel)]/80 border border-[var(--panel-border)] space-y-4">
             <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
               DL Number Generator
