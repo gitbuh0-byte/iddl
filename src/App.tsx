@@ -78,6 +78,7 @@ export default function App() {
     layerId: string;
     origin: { x: number; y: number };
     start: { x: number; y: number };
+    crop: { x: number; y: number; width: number; height: number };
   } | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
@@ -523,10 +524,12 @@ export default function App() {
         canvas.height = targetWidth / ratio;
 
         const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+        const cropWidth = fileCrop.width || 1;
+        const cropHeight = fileCrop.height || 1;
         const sx = Math.max(0, Math.min(img.width, fileCrop.x * img.width));
         const sy = Math.max(0, Math.min(img.height, fileCrop.y * img.height));
-        const sw = Math.max(1, Math.min(img.width - sx, fileCrop.width * img.width));
-        const sh = Math.max(1, Math.min(img.height - sy, fileCrop.height * img.height));
+        const sw = Math.max(1, Math.min(img.width - sx, cropWidth * img.width));
+        const sh = Math.max(1, Math.min(img.height - sy, cropHeight * img.height));
 
         // Apply adjustments
         ctx.filter = `brightness(${1 + selectedFile.adjustments.brightness * 0.1}) contrast(${1 + selectedFile.adjustments.contrast * 0.1}) saturate(${1 + selectedFile.adjustments.saturation * 0.1})`;
@@ -537,10 +540,14 @@ export default function App() {
         selectedFile.layers.forEach((layer: Layer) => {
           if (!layer.visible) return;
 
-          const x = layer.x * canvas.width;
-          const y = layer.y * canvas.height;
-          const w = layer.width * canvas.width;
-          const h = layer.height * canvas.height;
+          const relativeX = (layer.x - fileCrop.x) / cropWidth;
+          const relativeY = (layer.y - fileCrop.y) / cropHeight;
+          const relativeW = layer.width / cropWidth;
+          const relativeH = layer.height / cropHeight;
+          const x = relativeX * canvas.width;
+          const y = relativeY * canvas.height;
+          const w = relativeW * canvas.width;
+          const h = relativeH * canvas.height;
 
           if (layer.type === "image" && layer.imageSrc) {
             const overlay = new Image();
@@ -691,13 +698,20 @@ export default function App() {
     const x = (e.clientX - rect.left) / canvasRef.current.width;
     const y = (e.clientY - rect.top) / canvasRef.current.height;
 
-    if (!editMode && selectedLayer && !selectedLayer.locked) {
+    if (!editMode && selectedLayer && !selectedLayer.locked && selectedFile) {
+      const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+      const cropWidth = fileCrop.width || 1;
+      const cropHeight = fileCrop.height || 1;
+      const displayStartX = (selectedLayer.x - fileCrop.x) / cropWidth;
+      const displayStartY = (selectedLayer.y - fileCrop.y) / cropHeight;
+
       pushSnapshot();
       clearRedoStack();
       setSelectedLayerDrag({
         layerId: selectedLayer.id,
         origin: { x, y },
-        start: { x: selectedLayer.x, y: selectedLayer.y },
+        start: { x: displayStartX, y: displayStartY },
+        crop: fileCrop,
       });
       setIsDragging(true);
       return;
@@ -718,10 +732,20 @@ export default function App() {
     setCurrentDrag({ x, y });
 
     if (selectedLayerDrag && selectedFile) {
+      const draggedLayer = selectedFile.layers.find((layer) => layer.id === selectedLayerDrag.layerId);
+      if (!draggedLayer) return;
+
+      const crop = selectedLayerDrag.crop || selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+      const cropWidth = crop.width || 1;
+      const cropHeight = crop.height || 1;
       const deltaX = x - selectedLayerDrag.origin.x;
       const deltaY = y - selectedLayerDrag.origin.y;
-      const updatedLayerX = Math.max(0, Math.min(1 - (selectedLayer?.width ?? 0), selectedLayerDrag.start.x + deltaX));
-      const updatedLayerY = Math.max(0, Math.min(1 - (selectedLayer?.height ?? 0), selectedLayerDrag.start.y + deltaY));
+      const displayWidth = (draggedLayer.width || 0) / cropWidth;
+      const displayHeight = (draggedLayer.height || 0) / cropHeight;
+      const displayX = Math.max(0, Math.min(1 - displayWidth, selectedLayerDrag.start.x + deltaX));
+      const displayY = Math.max(0, Math.min(1 - displayHeight, selectedLayerDrag.start.y + deltaY));
+      const updatedLayerX = crop.x + displayX * cropWidth;
+      const updatedLayerY = crop.y + displayY * cropHeight;
 
       setFiles((prev) => prev.map((file) => {
         if (file.id !== selectedFileId) return file;
@@ -757,16 +781,21 @@ export default function App() {
     const y = Math.min(dragStart.y, currentDrag.y);
     const width = Math.abs(currentDrag.x - dragStart.x);
     const height = Math.abs(currentDrag.y - dragStart.y);
+    const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
 
     if (width > 0.01 && height > 0.01) {
+      const xOriginal = fileCrop.x + x * fileCrop.width;
+      const yOriginal = fileCrop.y + y * fileCrop.height;
+      const widthOriginal = width * fileCrop.width;
+      const heightOriginal = height * fileCrop.height;
       const newLayer: Layer = {
         id: `layer-${Date.now()}`,
         name: `${drawingLayer.charAt(0).toUpperCase() + drawingLayer.slice(1)} ${selectedFile.layers.length + 1}`,
         type: drawingLayer as any,
-        x,
-        y,
-        width,
-        height,
+        x: xOriginal,
+        y: yOriginal,
+        width: widthOriginal,
+        height: heightOriginal,
         visible: true,
         locked: false,
         opacity: 1,
@@ -1082,10 +1111,10 @@ export default function App() {
       {!isAuthenticated ? (
         <Login onLoginSuccess={() => setIsAuthenticated(true)} />
       ) : (
-        <div data-theme={theme} className="min-h-screen bg-[#050505] text-neutral-100 font-sans selection:bg-blue-500/30 flex flex-col h-screen overflow-hidden">
+        <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-4 sm:py-0 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <ImageIcon className="w-5 h-5 text-white" />
@@ -1106,7 +1135,7 @@ export default function App() {
           </div>
           
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
@@ -1300,9 +1329,9 @@ export default function App() {
       </header>
 
       {/* Main UI */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar: File Browser */}
-        <div className={`${viewMode === "preview" ? "hidden" : "w-72 border-r border-[var(--panel-border)] bg-[var(--surface)] flex flex-col shrink-0"}`}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-72 border-r border-[var(--panel-border)] bg-[var(--surface)] flex flex-col shrink-0"}>
           <div className="p-4 border-b border-neutral-800/50 flex items-center justify-between">
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Photo Library</span>
             <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[10px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
@@ -1361,7 +1390,7 @@ export default function App() {
         </div>
 
         {/* Center: Canvas */}
-        <div className="flex-1 bg-[#050505] relative overflow-hidden flex items-center justify-center p-8 lg:p-16">
+        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-4 lg:p-8">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#111_0%,_transparent_70%)] pointer-events-none" />
           
           {selectedFile ? (
@@ -1450,7 +1479,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments */}
-        <div className={`${viewMode === "preview" ? "hidden" : "w-80 border-l border-[var(--panel-border)] bg-[var(--surface)] p-6 space-y-8 shrink-0 overflow-y-auto"}`}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-[var(--panel-border)] bg-[var(--surface)] p-4 lg:p-6 space-y-8 shrink-0 overflow-y-auto"}>
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-4">
