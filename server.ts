@@ -32,43 +32,99 @@ interface DetectionResult {
 }
 
 async function detectFaces(pixelData: Uint8ClampedArray, imgWidth: number, imgHeight: number): Promise<DetectionResult['faces']> {
-  // Simple face detection using color/skin tone analysis
-  console.log("Detecting faces using skin tone analysis...");
+  console.log("Detecting faces using enhanced skin tone and shape analysis...");
   const faces: DetectionResult['faces'] = [];
-  const faceBlockSize = 40;
-  
-  for (let y = 0; y < imgHeight; y += faceBlockSize) {
-    for (let x = 0; x < imgWidth; x += faceBlockSize) {
+  const blockSize = Math.floor(Math.max(imgWidth, imgHeight) / 20); // Smaller blocks for better detection
+
+  // Create a skin probability map
+  const skinMap = new Uint8Array(imgWidth * imgHeight);
+
+  for (let y = 0; y < imgHeight; y++) {
+    for (let x = 0; x < imgWidth; x++) {
+      const idx = (y * imgWidth + x) * 4;
+      const r = pixelData[idx] || 0;
+      const g = pixelData[idx + 1] || 0;
+      const b = pixelData[idx + 2] || 0;
+
+      // Enhanced skin detection using multiple criteria
+      const isSkin = (
+        // Basic skin tone range
+        r > 60 && g > 40 && b > 20 &&
+        r > g && r > b &&
+        Math.abs(r - g) > 10 &&
+        // Additional checks for better accuracy
+        (r / Math.max(g, b) > 1.1) &&
+        (g / b > 0.8) &&
+        // Exclude very bright/white pixels
+        Math.max(r, g, b) < 240
+      );
+
+      skinMap[y * imgWidth + x] = isSkin ? 1 : 0;
+    }
+  }
+
+  // Find connected skin regions
+  for (let y = 0; y < imgHeight; y += blockSize) {
+    for (let x = 0; x < imgWidth; x += blockSize) {
       let skinPixels = 0;
       let totalPixels = 0;
-      
-      for (let py = y; py < Math.min(y + faceBlockSize, imgHeight); py++) {
-        for (let px = x; px < Math.min(x + faceBlockSize, imgWidth); px++) {
-          const idx = (py * imgWidth + px) * 4;
-          const r = pixelData[idx] || 0;
-          const g = pixelData[idx + 1] || 0;
-          const b = pixelData[idx + 2] || 0;
-          totalPixels++;
+      let minX = x, maxX = x + blockSize, minY = y, maxY = y + blockSize;
 
-          // Basic skin tone detection
-          if (r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 15) {
+      // Analyze block and expand to connected skin regions
+      for (let py = y; py < Math.min(y + blockSize, imgHeight); py++) {
+        for (let px = x; px < Math.min(x + blockSize, imgWidth); px++) {
+          if (skinMap[py * imgWidth + px]) {
             skinPixels++;
+            minX = Math.min(minX, px);
+            maxX = Math.max(maxX, px);
+            minY = Math.min(minY, py);
+            maxY = Math.max(maxY, py);
           }
+          totalPixels++;
         }
       }
 
-      // If >20% pixels look like skin, likely a face region
-      if (totalPixels > 0 && skinPixels / totalPixels > 0.2) {
-        faces.push({
-          x: (x / imgWidth) * 100,
-          y: (y / imgHeight) * 100,
-          width: ((faceBlockSize) / imgWidth) * 100,
-          height: ((faceBlockSize) / imgHeight) * 100,
-          confidence: Math.min(1, (skinPixels / totalPixels) * 2),
-        });
+      // Expand to find full face region
+      if (skinPixels / totalPixels > 0.3) {
+        // Grow region to include connected skin pixels
+        let changed = true;
+        while (changed && (maxX - minX < imgWidth * 0.3) && (maxY - minY < imgHeight * 0.3)) {
+          changed = false;
+          const newMinX = Math.max(0, minX - 5);
+          const newMaxX = Math.min(imgWidth, maxX + 5);
+          const newMinY = Math.max(0, minY - 5);
+          const newMaxY = Math.min(imgHeight, maxY + 5);
+
+          for (let py = newMinY; py < newMaxY; py++) {
+            for (let px = newMinX; px < newMaxX; px++) {
+              if (skinMap[py * imgWidth + px] && (px < minX || px >= maxX || py < minY || py >= maxY)) {
+                minX = Math.min(minX, px);
+                maxX = Math.max(maxX, px);
+                minY = Math.min(minY, py);
+                maxY = Math.max(maxY, py);
+                changed = true;
+              }
+            }
+          }
+        }
+
+        const width = maxX - minX;
+        const height = maxY - minY;
+
+        // Filter for reasonable face proportions (roughly square, not too small/large)
+        if (width > 20 && height > 20 && width / height > 0.5 && width / height < 2.0) {
+          faces.push({
+            x: (minX / imgWidth) * 100,
+            y: (minY / imgHeight) * 100,
+            width: (width / imgWidth) * 100,
+            height: (height / imgHeight) * 100,
+            confidence: Math.min(1, (skinPixels / totalPixels) * 1.5),
+          });
+        }
       }
     }
   }
+
   console.log(`Found ${faces.length} face regions`);
   return faces;
 }
@@ -185,7 +241,65 @@ async function analyzeImage(imagePath: string): Promise<DetectionResult> {
     const imgHeight = image.bitmap.height;
     console.log(`Image size: ${imgWidth}x${imgHeight}`);
 
-    // Analyze image properties
+    // Convert JIMP image to TensorFlow tensor for COCO-SSD
+    const imageData = new Uint8Array(image.bitmap.data);
+    const tfImage = tf.browser.fromPixels({
+      data: imageData,
+      width: imgWidth,
+      height: imgHeight,
+      channels: 4
+    });
+
+    // Run COCO-SSD object detection
+    console.log("Running COCO-SSD object detection...");
+    const predictions = await cocoModel.detect(tfImage, 0.4, 0.5); // threshold: 0.4, maxBoxes: 0.5
+
+    console.log(`COCO-SSD detected ${predictions.length} objects`);
+
+    // Process detections
+    const faces: DetectionResult['faces'] = [];
+    const text: DetectionResult['text'] = [];
+    const signatures: DetectionResult['signatures'] = [];
+    const codes: DetectionResult['codes'] = [];
+
+    predictions.forEach((prediction: any) => {
+      const bbox = prediction.bbox; // [x, y, width, height]
+      const x = bbox[0] / imgWidth;
+      const y = bbox[1] / imgHeight;
+      const width = bbox[2] / imgWidth;
+      const height = bbox[3] / imgHeight;
+
+      const className = prediction.class.toLowerCase();
+
+      if (className.includes('person') || className.includes('face')) {
+        faces.push({
+          x: Math.max(0, x),
+          y: Math.max(0, y),
+          width: Math.min(1, width),
+          height: Math.min(1, height),
+          confidence: prediction.score,
+        });
+      } else if (className.includes('book') || className.includes('document') || className.includes('paper')) {
+        // Could be text areas
+        text.push({
+          x: Math.max(0, x),
+          y: Math.max(0, y),
+          width: Math.min(1, width),
+          height: Math.min(1, height),
+          content: `${className} area`,
+        });
+      }
+    });
+
+    // Fallback to basic detection if COCO-SSD didn't find much
+    if (faces.length === 0) {
+      console.log("COCO-SSD found no faces, using fallback skin tone detection...");
+      const pixelData = new Uint8ClampedArray(image.bitmap.data);
+      const fallbackFaces = await detectFaces(pixelData, imgWidth, imgHeight);
+      faces.push(...fallbackFaces);
+    }
+
+    // Analyze image properties for background and other components
     const pixelData = new Uint8ClampedArray(image.bitmap.data);
     const colorCounts: { [key: string]: number } = {};
     let dominantColor = "#ffffff";
@@ -206,13 +320,19 @@ async function analyzeImage(imagePath: string): Promise<DetectionResult> {
       }
     }
 
-    // Run all detections in parallel
-    const [faces, signatures, codes, text] = await Promise.all([
-      detectFaces(pixelData, imgWidth, imgHeight),
+    // Run additional detections
+    const [detectedSignatures, detectedCodes, detectedText] = await Promise.all([
       detectSignatures(pixelData, imgWidth, imgHeight),
       detectCodes(pixelData, imgWidth, imgHeight),
       detectText(imagePath, imgWidth, imgHeight),
     ]);
+
+    signatures.push(...detectedSignatures);
+    codes.push(...detectedCodes);
+    text.push(...detectedText);
+
+    // Clean up TensorFlow tensors
+    tfImage.dispose();
 
     return {
       faces,

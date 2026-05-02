@@ -281,7 +281,7 @@ export function dilateMask(mask: HTMLCanvasElement, iterations: number = 2): HTM
 }
 
 /**
- * Load OpenCV.js from CDN with improved error handling
+ * Load OpenCV.js with improved error handling and fallback
  */
 export function loadOpenCV(): Promise<void> {
   return new Promise((resolve) => {
@@ -291,45 +291,115 @@ export function loadOpenCV(): Promise<void> {
       return;
     }
 
-    console.log('Loading OpenCV.js from CDN...');
+    console.log('Loading OpenCV.js...');
+
+    // Try loading from CDN first
     const script = document.createElement('script');
     script.src = 'https://docs.opencv.org/4.5.5/opencv.js';
     script.async = true;
 
     let checkAttempts = 0;
-    const maxAttempts = 150; // 15 seconds
+    const maxAttempts = 200; // 20 seconds
+
+    const checkLoaded = () => {
+      checkAttempts++;
+
+      if (window.cv && window.cv.Mat) {
+        clearInterval(checkInterval);
+        console.log('✓ OpenCV.js initialized successfully');
+        resolve();
+      } else if (checkAttempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('OpenCV.js load timeout, trying alternative CDN...');
+
+        // Try alternative CDN
+        const altScript = document.createElement('script');
+        altScript.src = 'https://cdn.jsdelivr.net/npm/opencv.js@4.5.5/opencv.js';
+        altScript.async = true;
+
+        let altAttempts = 0;
+        const altMaxAttempts = 200;
+
+        const altCheckInterval = setInterval(() => {
+          altAttempts++;
+
+          if (window.cv && window.cv.Mat) {
+            clearInterval(altCheckInterval);
+            console.log('✓ OpenCV.js loaded from alternative CDN');
+            resolve();
+          } else if (altAttempts >= altMaxAttempts) {
+            clearInterval(altCheckInterval);
+            console.warn('Alternative CDN also failed, using blur-based fallback');
+            resolve(); // Still resolve to allow blur-based inpainting
+          }
+        }, 100);
+
+        altScript.onload = () => {
+          console.log('Alternative OpenCV.js script loaded, waiting for initialization...');
+        };
+
+        altScript.onerror = () => {
+          console.error('Failed to load OpenCV.js from alternative CDN');
+          console.log('Using blur-based inpainting fallback');
+          resolve();
+        };
+
+        document.head.appendChild(altScript);
+      }
+    };
+
+    const checkInterval = setInterval(checkLoaded, 100);
 
     script.onload = () => {
       console.log('OpenCV.js script loaded, waiting for initialization...');
-      const checkInterval = setInterval(() => {
-        checkAttempts++;
-
-        if (window.cv && window.cv.Mat) {
-          clearInterval(checkInterval);
-          console.log('✓ OpenCV.js initialized successfully');
-          resolve();
-        } else if (checkAttempts >= maxAttempts) {
-          clearInterval(checkInterval);
-          console.warn('OpenCV initialization timeout, using fallback blur mode');
-          resolve(); // Still resolve to allow blur-based inpainting to work
-        }
-      }, 100);
     };
 
     script.onerror = () => {
-      console.error('Failed to load OpenCV.js from CDN');
-      console.log('Fallback: using blur-based inpainting only');
-      resolve(); // Still resolve to allow blur-based inpainting
+      console.error('Failed to load OpenCV.js from primary CDN, trying alternative...');
+
+      // Try alternative immediately
+      const altScript = document.createElement('script');
+      altScript.src = 'https://cdn.jsdelivr.net/npm/opencv.js@4.5.5/opencv.js';
+      altScript.async = true;
+
+      let altAttempts = 0;
+      const altMaxAttempts = 200;
+
+      const altCheckInterval = setInterval(() => {
+        altAttempts++;
+
+        if (window.cv && window.cv.Mat) {
+          clearInterval(altCheckInterval);
+          console.log('✓ OpenCV.js loaded from alternative CDN');
+          resolve();
+        } else if (altAttempts >= altMaxAttempts) {
+          clearInterval(altCheckInterval);
+          console.warn('OpenCV.js load failed, using blur-based fallback');
+          resolve();
+        }
+      }, 100);
+
+      altScript.onload = () => {
+        console.log('Alternative OpenCV.js script loaded, waiting for initialization...');
+      };
+
+      altScript.onerror = () => {
+        console.error('Failed to load OpenCV.js from both CDNs');
+        console.log('Using blur-based inpainting fallback');
+        resolve();
+      };
+
+      document.head.appendChild(altScript);
     };
 
     document.head.appendChild(script);
 
-    // 30 second total timeout
+    // 40 second total timeout
     setTimeout(() => {
       if (!window.cv || !window.cv.Mat) {
         console.warn('OpenCV.js load timeout, using fallback mode');
         resolve();
       }
-    }, 30000);
+    }, 40000);
   });
 }

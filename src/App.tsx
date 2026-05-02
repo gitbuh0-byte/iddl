@@ -398,16 +398,91 @@ export default function App() {
     setCurrentDrag(null);
   };
 
-  const deleteLayer = (layerId: string) => {
-    // Delete layer from selected file
-    setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
-      f.id === selectedFileId 
-        ? { ...f, layers: f.layers.filter((l: Layer) => l.id !== layerId) }
-        : f
-    ));
-    // Clear selection if deleted layer was selected
-    if (selectedLayerId === layerId) setSelectedLayerId(null);
-    console.log(`Deleted layer: ${layerId}`);
+  const deleteLayer = async (layerId: string) => {
+    if (!selectedFile || !canvasRef.current) return;
+    
+    const layer = selectedFile.layers.find(l => l.id === layerId);
+    if (!layer) return;
+
+    // Check if OpenCV is loaded for inpainting
+    if (!openCVLoaded) {
+      alert("OpenCV is still loading. Please try again in a moment.");
+      return;
+    }
+
+    setIsInpainting(true);
+    try {
+      const canvas = canvasRef.current;
+      
+      // Validate canvas
+      if (!canvas.width || !canvas.height) {
+        throw new Error("Canvas dimensions are invalid. Please make sure an image is loaded.");
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) throw new Error("Failed to get canvas context");
+
+      // Create mask from the layer area
+      const regions = [{
+        x: layer.x,
+        y: layer.y,
+        width: layer.width,
+        height: layer.height
+      }];
+
+      console.log(`Creating mask for layer: ${layer.name}`);
+      const maskCanvas = createMask(canvas.width, canvas.height, regions);
+      
+      console.log("Dilating mask...");
+      const dilatedMask = dilateMask(maskCanvas, 2);
+
+      // Perform inpainting
+      console.log("Starting inpainting process...");
+      const inpaintedCanvas = await inpaintImage({
+        canvas,
+        mask: dilatedMask,
+        method: "telea",
+      });
+
+      console.log("Inpainting complete, updating canvas...");
+      // Update canvas with inpainted result
+      const inpaintedCtx = inpaintedCanvas.getContext("2d");
+      const resultImageData = inpaintedCtx?.getImageData(
+        0,
+        0,
+        inpaintedCanvas.width,
+        inpaintedCanvas.height
+      );
+
+      if (resultImageData) {
+        ctx.putImageData(resultImageData, 0, 0);
+      } else {
+        throw new Error("Failed to get inpainted image data");
+      }
+
+      // Remove layer from the layer list
+      setFiles((prev: ManagedFile[]) =>
+        prev.map((f: ManagedFile) =>
+          f.id === selectedFileId
+            ? {
+                ...f,
+                layers: f.layers.filter((l: Layer) => l.id !== layerId),
+              }
+            : f
+        )
+      );
+
+      // Clear selection if deleted layer was selected
+      if (selectedLayerId === layerId) setSelectedLayerId(null);
+
+      console.log(`Successfully deleted and inpainted layer: ${layerId}`);
+    } catch (error) {
+      console.error("Layer deletion error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      alert(`Failed to delete component: ${errorMessage}`);
+    } finally {
+      setIsInpainting(false);
+    }
   };
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
@@ -819,6 +894,29 @@ export default function App() {
                     </div>
                   </motion.div>
                 )}
+
+                {isInpainting && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-neutral-950/80 backdrop-blur-xl flex flex-col items-center justify-center z-20"
+                  >
+                    <div className="relative">
+                      <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
+                      <Wand2 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-amber-500" />
+                    </div>
+                    <p className="mt-8 text-amber-400 font-black uppercase tracking-[0.6em] text-[10px]">Removing Component</p>
+                    <div className="mt-8 w-64 h-1 bg-neutral-800 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 5, ease: "easeInOut", repeat: Infinity }}
+                        className="h-full bg-gradient-to-r from-amber-600 to-orange-400"
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </AnimatePresence>
 
               <div className="absolute bottom-4 left-4 flex gap-2">
@@ -952,8 +1050,14 @@ export default function App() {
                       </span>
                     </div>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); deleteLayer(layer.id); }}
-                      className="opacity-0 group-hover:opacity-100 text-neutral-700 hover:text-red-500 transition-colors"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        if (window.confirm(`Delete ${layer.name}? This will remove the component from the image using inpainting.`)) {
+                          deleteLayer(layer.id);
+                        }
+                      }}
+                      disabled={isInpainting}
+                      className="opacity-0 group-hover:opacity-100 text-neutral-700 hover:text-red-500 transition-colors disabled:opacity-50"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
