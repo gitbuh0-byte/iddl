@@ -5,7 +5,7 @@ import {
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
   Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
-  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
@@ -37,7 +37,7 @@ interface Layer {
   fontFamily?: string;
   fontSize?: number;
   fontWeight?: string;
-  fontStyle?: "normal" | "italic" | "bold" | "bolder";
+  fontStyle?: string;
   imageSrc?: string;
   crop?: { x: number; y: number; width: number; height: number };
 }
@@ -93,6 +93,69 @@ export default function App() {
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
   const overlayInputRef = useRef<HTMLInputElement>(null);
   const [clipboardLayer, setClipboardLayer] = useState<Layer | null>(null);
+
+  const fontFamilies = [
+    { label: "Inter", value: "Inter, system-ui, sans-serif" },
+    { label: "Montserrat", value: "Montserrat, sans-serif" },
+    { label: "Roboto", value: "Roboto, sans-serif" },
+    { label: "Pacifico (Signature)", value: "Pacifico, cursive" },
+    { label: "Great Vibes (Signature)", value: "Great Vibes, cursive" },
+    { label: "Caveat (Signature)", value: "Caveat, cursive" },
+  ];
+
+  const textStyles: Array<{ label: string; value: "normal" | "italic" | "oblique" }> = [
+    { label: "Normal", value: "normal" },
+    { label: "Italic", value: "italic" },
+    { label: "Oblique", value: "oblique" },
+  ];
+
+  const fontWeights = [
+    { label: "Regular", value: "400" },
+    { label: "Medium", value: "500" },
+    { label: "Semi Bold", value: "600" },
+    { label: "Bold", value: "700" },
+    { label: "Black", value: "900" },
+  ];
+
+  const updateSelectedLayer = (updates: Partial<Layer>) => {
+    if (!selectedLayer) return;
+    updateLayer(selectedLayer.id, updates);
+  };
+
+  const addSignatureLayer = (text = "Your Signature") => {
+    if (!selectedFileId) return;
+    const newLayer: Layer = {
+      id: `signature-${Date.now()}`,
+      name: "Signature Layer",
+      type: "signature",
+      x: 0.2,
+      y: 0.2,
+      width: 0.5,
+      height: 0.15,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      text,
+      textColor: "#ffffff",
+      fontFamily: "Great Vibes, cursive",
+      fontSize: 46,
+      fontWeight: "400",
+      fontStyle: "normal",
+    };
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((f) =>
+      f.id === selectedFileId
+        ? { ...f, layers: [...f.layers, newLayer] }
+        : f
+    ));
+    setSelectedLayerId(newLayer.id);
+  };
+
+  const openOverlayImagePicker = () => {
+    overlayInputRef.current?.click();
+  };
 
   type HistorySnapshot = {
     files: ManagedFile[];
@@ -351,6 +414,12 @@ export default function App() {
             visible: true,
             locked: false,
             opacity: 1,
+            text: txt.content,
+            textColor: "#ffffff",
+            fontFamily: "Inter, system-ui, sans-serif",
+            fontSize: 28,
+            fontWeight: "600",
+            fontStyle: "normal",
           });
         });
 
@@ -1025,6 +1094,67 @@ export default function App() {
 
             <div className="h-6 w-px bg-neutral-800 mx-1" />
 
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => addTextLayer("New Text")}
+                  disabled={!selectedFile}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Add Text
+                </button>
+                <button
+                  type="button"
+                  onClick={() => addSignatureLayer()}
+                  disabled={!selectedFile}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <Eraser className="w-3.5 h-3.5" />
+                  Signature
+                </button>
+                <button
+                  type="button"
+                  onClick={openOverlayImagePicker}
+                  disabled={!selectedFile}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Overlay
+                </button>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={copyLayer}
+                  disabled={!selectedLayer}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  Copy
+                </button>
+                <button
+                  type="button"
+                  onClick={cutLayer}
+                  disabled={!selectedLayer}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Cut
+                </button>
+                <button
+                  type="button"
+                  onClick={pasteLayer}
+                  disabled={!clipboardLayer || !selectedFile}
+                  className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+                >
+                  <Clipboard className="w-3.5 h-3.5" />
+                  Paste
+                </button>
+              </div>
+            </div>
+
             {/* Export Buttons */}
             <div className="flex gap-2">
               <button
@@ -1147,6 +1277,7 @@ export default function App() {
             )}
           </div>
           <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden" accept="image/*" />
+          <input type="file" ref={overlayInputRef} onChange={handleOverlaySelect} className="hidden" accept="image/*" />
         </div>
 
         {/* Center: Canvas */}
@@ -1408,6 +1539,229 @@ export default function App() {
                     <Shield className="w-3 h-3" />
                     {selectedLayer.locked ? "Locked" : "Unlocked"}
                   </button>
+                </div>
+
+                <div className="space-y-4 pt-2 border-t border-neutral-800/70">
+                  {selectedLayer.type === "text" || selectedLayer.type === "signature" ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Text</label>
+                        <textarea
+                          value={selectedLayer.text || ""}
+                          onChange={(e) => updateSelectedLayer({ text: e.target.value })}
+                          className="w-full min-h-[80px] p-3 rounded-xl bg-neutral-950 border border-neutral-800 text-[11px] text-neutral-200 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Font</label>
+                          <select
+                            value={selectedLayer.fontFamily || fontFamilies[0].value}
+                            onChange={(e) => updateSelectedLayer({ fontFamily: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-200 focus:outline-none focus:border-blue-500"
+                          >
+                            {fontFamilies.map((font) => (
+                              <option key={font.value} value={font.value}>{font.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Color</label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="color"
+                              value={selectedLayer.textColor || "#ffffff"}
+                              onChange={(e) => updateSelectedLayer({ textColor: e.target.value })}
+                              className="w-12 h-10 p-0 border border-neutral-700 rounded-lg cursor-pointer"
+                            />
+                            <span className="text-[10px] text-neutral-300 font-mono">{selectedLayer.textColor || "#ffffff"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Size</label>
+                          <input
+                            type="range"
+                            min="12"
+                            max="120"
+                            value={selectedLayer.fontSize || 28}
+                            onChange={(e) => updateSelectedLayer({ fontSize: Number(e.target.value) })}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{selectedLayer.fontSize || 28}px</span>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Weight</label>
+                          <select
+                            value={selectedLayer.fontWeight || "600"}
+                            onChange={(e) => updateSelectedLayer({ fontWeight: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-200 focus:outline-none focus:border-blue-500"
+                          >
+                            {fontWeights.map((weight) => (
+                              <option key={weight.value} value={weight.value}>{weight.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Style</label>
+                          <select
+                            value={selectedLayer.fontStyle || "normal"}
+                            onChange={(e) => updateSelectedLayer({ fontStyle: e.target.value as "normal" | "italic" | "oblique" })}
+                            className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-[10px] text-neutral-200 focus:outline-none focus:border-blue-500"
+                          >
+                            {textStyles.map((style) => (
+                              <option key={style.value} value={style.value}>{style.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {selectedLayer.type === "image" ? (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Overlay Image</label>
+                        <button
+                          onClick={openOverlayImagePicker}
+                          className="w-full py-2 px-3 rounded-xl bg-neutral-800 border border-neutral-700 text-[10px] font-bold uppercase text-neutral-200 hover:bg-neutral-700"
+                        >Replace Image</button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop X</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={selectedLayer.crop?.x ?? 0}
+                            onChange={(e) => {
+                            const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+                            updateSelectedLayer({ crop: { ...crop, x: Number(e.target.value) } });
+                          }}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{((selectedLayer.crop?.x ?? 0) * 100).toFixed(0)}%</span>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Y</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.01"
+                            value={selectedLayer.crop?.y ?? 0}
+                            onChange={(e) => {
+                            const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+                            updateSelectedLayer({ crop: { ...crop, y: Number(e.target.value) } });
+                          }}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{((selectedLayer.crop?.y ?? 0) * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Width</label>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="1"
+                            step="0.01"
+                            value={selectedLayer.crop?.width ?? 1}
+                            onChange={(e) => {
+                            const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+                            updateSelectedLayer({ crop: { ...crop, width: Number(e.target.value) } });
+                          }}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{((selectedLayer.crop?.width ?? 1) * 100).toFixed(0)}%</span>
+                        </div>
+                        <div>
+                          <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop Height</label>
+                          <input
+                            type="range"
+                            min="0.1"
+                            max="1"
+                            step="0.01"
+                            value={selectedLayer.crop?.height ?? 1}
+                            onChange={(e) => {
+                            const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+                            updateSelectedLayer({ crop: { ...crop, height: Number(e.target.value) } });
+                          }}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{((selectedLayer.crop?.height ?? 1) * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Position & Size</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[8px] uppercase tracking-[0.2em] text-neutral-500">X</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.005"
+                            value={selectedLayer.x}
+                            onChange={(e) => updateSelectedLayer({ x: Number(e.target.value) })}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{(selectedLayer.x * 100).toFixed(1)}%</span>
+                        </div>
+                        <div>
+                          <label className="text-[8px] uppercase tracking-[0.2em] text-neutral-500">Y</label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="1"
+                            step="0.005"
+                            value={selectedLayer.y}
+                            onChange={(e) => updateSelectedLayer({ y: Number(e.target.value) })}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{(selectedLayer.y * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 pt-3">
+                        <div>
+                          <label className="text-[8px] uppercase tracking-[0.2em] text-neutral-500">Width</label>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="1"
+                            step="0.005"
+                            value={selectedLayer.width}
+                            onChange={(e) => updateSelectedLayer({ width: Number(e.target.value) })}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{(selectedLayer.width * 100).toFixed(1)}%</span>
+                        </div>
+                        <div>
+                          <label className="text-[8px] uppercase tracking-[0.2em] text-neutral-500">Height</label>
+                          <input
+                            type="range"
+                            min="0.05"
+                            max="1"
+                            step="0.005"
+                            value={selectedLayer.height}
+                            onChange={(e) => updateSelectedLayer({ height: Number(e.target.value) })}
+                            className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                          />
+                          <span className="text-[8px] text-neutral-600">{(selectedLayer.height * 100).toFixed(1)}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
