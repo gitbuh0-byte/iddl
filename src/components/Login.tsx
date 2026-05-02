@@ -21,7 +21,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setError("");
     setIsLoading(true);
 
-    const trimmedUsername = username.trim();
+    const trimmedUsername = username.trim().toUpperCase();
     const trimmedPassword = password.trim();
 
     // Simulate a small delay for better UX
