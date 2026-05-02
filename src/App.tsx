@@ -110,6 +110,9 @@ export default function App() {
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
   const overlayInputRef = useRef<HTMLInputElement>(null);
   const [clipboardLayer, setClipboardLayer] = useState<Layer | null>(null);
+  const [clipboardIsBaseImage, setClipboardIsBaseImage] = useState(false);
+  const [selectedBaseImage, setSelectedBaseImage] = useState(false);
+  const imageCache = useRef<Record<string, HTMLImageElement>>({});
 
   const fontFamilies = [
     { label: "Inter", value: "Inter, system-ui, sans-serif" },
@@ -360,25 +363,83 @@ export default function App() {
   };
 
   const copyLayer = () => {
-    if (!selectedLayer) return;
-    setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
+    if (selectedLayer) {
+      setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
+      setClipboardIsBaseImage(false);
+      setSelectedBaseImage(false);
+      return;
+    }
+
+    if (selectedBaseImage && selectedFile) {
+      const baseImageSrc = selectedFile.inpaintedUrl || selectedFile.originalUrl;
+      if (!baseImageSrc) return;
+      const baseLayer: Layer = {
+        id: `base-${Date.now()}`,
+        name: "Background Image",
+        type: "image",
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        visible: true,
+        locked: false,
+        opacity: 1,
+        imageSrc: baseImageSrc,
+        crop: { x: 0, y: 0, width: 1, height: 1 },
+      };
+      setClipboardLayer(baseLayer);
+      setClipboardIsBaseImage(true);
+    }
   };
 
   const cutLayer = () => {
-    if (!selectedLayer || !selectedFile) return;
-    setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
-    pushSnapshot();
-    clearRedoStack();
-    setFiles((prev) => prev.map((f) =>
-      f.id === selectedFileId
-        ? { ...f, layers: f.layers.filter((layer) => layer.id !== selectedLayer.id) }
-        : f
-    ));
-    setSelectedLayerId(null);
+    if (selectedLayer && selectedFile) {
+      setClipboardLayer(JSON.parse(JSON.stringify(selectedLayer)));
+      setClipboardIsBaseImage(false);
+      pushSnapshot();
+      clearRedoStack();
+      setFiles((prev) => prev.map((f) =>
+        f.id === selectedFileId
+          ? { ...f, layers: f.layers.filter((layer) => layer.id !== selectedLayer.id) }
+          : f
+      ));
+      setSelectedLayerId(null);
+      return;
+    }
+
+    if (selectedBaseImage && selectedFile) {
+      const baseImageSrc = selectedFile.inpaintedUrl || selectedFile.originalUrl;
+      if (!baseImageSrc) return;
+      const baseLayer: Layer = {
+        id: `base-${Date.now()}`,
+        name: "Background Image",
+        type: "image",
+        x: 0,
+        y: 0,
+        width: 1,
+        height: 1,
+        visible: true,
+        locked: false,
+        opacity: 1,
+        imageSrc: baseImageSrc,
+        crop: { x: 0, y: 0, width: 1, height: 1 },
+      };
+      setClipboardLayer(baseLayer);
+      setClipboardIsBaseImage(true);
+      pushSnapshot();
+      clearRedoStack();
+      setFiles((prev) => prev.map((f) =>
+        f.id === selectedFileId
+          ? { ...f, crop: { x: 0, y: 0, width: 0, height: 0 } }
+          : f
+      ));
+      setSelectedBaseImage(false);
+    }
   };
 
   const pasteLayer = () => {
     if (!clipboardLayer || !selectedFileId) return;
+
     const pastedLayer = {
       ...JSON.parse(JSON.stringify(clipboardLayer)),
       id: `${clipboardLayer.id}-${Date.now()}`,
@@ -391,10 +452,15 @@ export default function App() {
     clearRedoStack();
     setFiles((prev) => prev.map((f) =>
       f.id === selectedFileId
-        ? { ...f, layers: [...f.layers, pastedLayer] }
+        ? {
+            ...f,
+            layers: [...f.layers, pastedLayer],
+            crop: clipboardIsBaseImage ? { x: 0, y: 0, width: 1, height: 1 } : f.crop,
+          }
         : f
     ));
     setSelectedLayerId(pastedLayer.id);
+    setClipboardIsBaseImage(false);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -562,17 +628,28 @@ export default function App() {
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
 
+    const getCachedImage = (src: string) => {
+      if (!imageCache.current[src]) {
+        const cached = new Image();
+        cached.crossOrigin = "anonymous";
+        cached.src = src;
+        imageCache.current[src] = cached;
+      }
+      return imageCache.current[src];
+    };
+
     // Redraw canvas whenever selected file or its layers change
     const drawCanvas = () => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      // Use inpainted version if available, otherwise use original
-      img.src = selectedFile.inpaintedUrl || selectedFile.originalUrl;
-      
-      img.onload = () => {
+      const imageSrc = selectedFile.inpaintedUrl || selectedFile.originalUrl;
+      if (!imageSrc) return;
+
+      const img = getCachedImage(imageSrc);
+      const renderCanvas = () => {
+        if (!img.complete || img.naturalWidth === 0) return;
+
         const container = stageRef.current;
         if (!container) return;
-        
+
         const ratio = img.width / img.height;
         const targetWidth = Math.min(container.clientWidth, 900);
         canvas.width = targetWidth;
@@ -586,7 +663,7 @@ export default function App() {
         const sw = Math.max(1, Math.min(img.width - sx, cropWidth * img.width));
         const sh = Math.max(1, Math.min(img.height - sy, cropHeight * img.height));
 
-        // Apply adjustments
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.filter = `brightness(${1 + selectedFile.adjustments.brightness * 0.1}) contrast(${1 + selectedFile.adjustments.contrast * 0.1}) saturate(${1 + selectedFile.adjustments.saturation * 0.1})`;
         ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
         ctx.filter = "none";
@@ -605,10 +682,9 @@ export default function App() {
           const h = relativeH * canvas.height;
 
           if (layer.type === "image" && layer.imageSrc) {
-            const overlay = new Image();
-            overlay.crossOrigin = "anonymous";
-            overlay.src = layer.imageSrc;
-            overlay.onload = () => {
+            const overlay = getCachedImage(layer.imageSrc);
+            const drawOverlay = () => {
+              if (!overlay.complete || overlay.naturalWidth === 0) return;
               const crop = layer.crop || { x: 0, y: 0, width: 1, height: 1 };
               const sx = crop.x * overlay.width;
               const sy = crop.y * overlay.height;
@@ -620,6 +696,14 @@ export default function App() {
               ctx.drawImage(overlay, sx, sy, sw, sh, x, y, w, h);
               ctx.restore();
             };
+
+            if (overlay.complete && overlay.naturalWidth > 0) {
+              drawOverlay();
+            } else {
+              overlay.onload = () => {
+                if (canvasRef.current) drawCanvas();
+              };
+            }
             return;
           }
 
@@ -691,6 +775,15 @@ export default function App() {
         });
 
         // Draw new layer being created
+        if (selectedBaseImage && !selectedLayer) {
+          ctx.save();
+          ctx.strokeStyle = "rgba(255,255,255,0.8)";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([6, 6]);
+          ctx.strokeRect(0, 0, canvas.width, canvas.height);
+          ctx.restore();
+        }
+
         if (isDragging && dragStart && currentDrag && drawingLayer) {
           ctx.globalAlpha = 0.5;
           const fillColors: Record<string, string> = {
@@ -720,13 +813,18 @@ export default function App() {
         }
       };
 
+      if (!img.complete || img.naturalWidth === 0) {
+        img.onload = renderCanvas;
+      }
+      renderCanvas();
+
       img.onerror = () => {
         console.error("Failed to load image:", selectedFile.originalUrl);
       };
     };
 
     drawCanvas();
-  }, [selectedFile, selectedLayer, isDragging, dragStart, currentDrag, drawingLayer]);
+  }, [selectedFile, selectedLayer, selectedBaseImage, isDragging, dragStart, currentDrag, drawingLayer]);
 
   // Load OpenCV for text inpainting
   useEffect(() => {
@@ -774,6 +872,7 @@ export default function App() {
 
     const clickedLayer = getTopLayerAtPoint(x * canvasLayout.width, y * canvasLayout.height);
     if (clickedLayer) {
+      setSelectedBaseImage(false);
       if (selectedLayerId !== clickedLayer.id) {
         setSelectedLayerId(clickedLayer.id);
       }
@@ -813,6 +912,11 @@ export default function App() {
         setIsDragging(true);
         return;
       }
+    }
+
+    if (!clickedLayer) {
+      setSelectedLayerId(null);
+      setSelectedBaseImage(true);
     }
 
     if (!editMode || !drawingLayer) return;
@@ -1412,6 +1516,12 @@ export default function App() {
                       <Clipboard className="w-3.5 h-3.5" />
                       Paste
                     </button>
+                    {selectedBaseImage && !selectedLayer && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/15 border border-emerald-400 text-emerald-200 text-[10px] font-semibold uppercase">
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+                        Background image selected
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={handleUndo}
