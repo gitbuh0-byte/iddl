@@ -1406,11 +1406,11 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-1.5 justify-end">
+          <div className="flex flex-wrap items-center gap-1 justify-end">
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1420,7 +1420,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
@@ -1477,7 +1477,7 @@ export default function App() {
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="p-1 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+              className="p-1 rounded-full bg-neutral-800/80 text-neutral-200 transition hover:bg-neutral-700"
             >
               <Upload className="w-3 h-3" />
             </button>
@@ -1486,7 +1486,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="p-1 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+                className="p-1 rounded-full bg-neutral-800/80 text-neutral-200 transition hover:bg-neutral-700"
                 title="More actions"
               >
                 <MoreHorizontal className="w-3 h-3" />
@@ -1623,18 +1623,18 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-[var(--panel-border)] bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
-          <div className="p-3 lg:p-4 border-b border-neutral-800/50 flex items-center justify-between flex-shrink-0">
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-neutral-800/60 bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
+          <div className="p-2 lg:p-3 border-b border-neutral-800/40 flex items-center justify-between flex-shrink-0">
             <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-[0.2em]">Library</span>
             <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[10px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-2 lg:p-4 space-y-2 lg:space-y-4">
+          <div className="flex-1 overflow-y-auto p-2 lg:p-3 space-y-2">
             {files.map(file => (
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[14/9] rounded-lg lg:rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_20px_-5px_rgba(59,130,246,0.3)]" : "border-neutral-800 hover:border-neutral-700"}`}
+                className={`group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_16px_-8px_rgba(59,130,246,0.25)]" : "border-neutral-800 hover:border-neutral-700"}`}
               >
                 <img src={file.originalUrl} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-neutral-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1668,12 +1668,12 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[14/9] rounded-lg lg:rounded-xl border-2 border-dashed border-neutral-800 flex flex-col items-center justify-center gap-1 lg:gap-2 text-neutral-600 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-[9px] lg:text-[10px] font-black uppercase tracking-widest"
+                className="w-full aspect-[4/3] rounded-lg border border-dashed border-neutral-800 flex flex-col items-center justify-center gap-1.5 text-neutral-600 hover:text-blue-500 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all text-[8px] font-bold uppercase tracking-[0.25em]"
               >
-                <div className="p-2 lg:p-3 bg-neutral-900 rounded-lg lg:rounded-xl">
-                  <Plus className="w-4 h-4 lg:w-5 lg:h-5" />
+                <div className="p-2 bg-neutral-900 rounded-lg">
+                  <Plus className="w-3 h-3" />
                 </div>
-                Upload
+                <span className="text-[8px] font-bold">Upload</span>
               </button>
             )}
           </div>
@@ -1688,7 +1688,7 @@ export default function App() {
           {selectedFile ? (
             <div 
               ref={stageRef}
-              className="relative rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] overflow-hidden bg-neutral-900 border border-white/5 w-full max-w-5xl"
+              className="relative rounded-3xl shadow-[0_30px_80px_-20px_rgba(0,0,0,0.65)] overflow-hidden bg-neutral-900 border border-neutral-800 w-full max-w-5xl"
             >
               <canvas 
                 ref={canvasRef}
@@ -1776,7 +1776,7 @@ export default function App() {
               </AnimatePresence>
 
               <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="px-3 py-1 bg-black/60 backdrop-blur border border-white/10 rounded-full flex items-center gap-2">
+                <div className="px-3 py-1 bg-black/60 backdrop-blur border border-neutral-800/30 rounded-full flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">Live Editor</span>
                 </div>
@@ -1799,7 +1799,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-[var(--panel-border)] bg-[var(--surface)] p-3 lg:p-6 space-y-6 lg:space-y-8 shrink-0 overflow-y-auto max-h-[40vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-neutral-800/40 bg-[var(--surface)] p-3 lg:p-4 space-y-4 lg:space-y-5 shrink-0 overflow-y-auto max-h-[40vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-3 lg:space-y-4">
@@ -2289,7 +2289,7 @@ export default function App() {
           {/* Statistics */}
           {selectedFile?.isAnalyzed && (
             <div className="p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 space-y-3">
-              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
+              <h4 className="text-[9px] font-bold text-neutral-500 uppercase tracking-[0.2em] flex items-center gap-1.5">
                 <BarChart3 className="w-4 h-4" />
                 Detection Stats
               </h4>
@@ -2416,9 +2416,9 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-4 rounded-xl bg-[var(--panel)]/80 border border-[var(--panel-border)] space-y-4">
+          <div className="p-3 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-3">
             <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em] flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
+              <CreditCard className="w-3.5 h-3.5" />
               DL Number Generator
             </h4>
             
@@ -2428,7 +2428,7 @@ export default function App() {
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="w-full px-3 py-2 bg-neutral-800 border border-neutral-700 rounded-lg text-[9px] font-bold text-neutral-300 focus:border-blue-600 focus:outline-none"
+                  className="w-full px-2 py-1.5 bg-neutral-800 border border-neutral-700 rounded-lg text-[8px] font-semibold text-neutral-300 focus:border-blue-600 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode}>
@@ -2440,9 +2440,9 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-400 hover:bg-blue-600/30"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[8px] font-semibold uppercase transition-all border bg-blue-600/20 border-blue-600 text-blue-300 hover:bg-blue-600/30"
               >
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-3 h-3" />
                 Generate
               </button>
 
@@ -2452,7 +2452,7 @@ export default function App() {
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
-                      className="p-3 rounded-lg bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 transition-all space-y-2"
+                      className="p-2 rounded-lg bg-neutral-800/50 border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
                     >
                       {/* DL Number */}
                       <div className="flex items-center justify-between gap-2">
