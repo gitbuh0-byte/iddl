@@ -37,6 +37,7 @@ interface ManagedFile {
   id: string;
   name: string;
   originalUrl: string;
+  inpaintedUrl: string | null; // Stores the inpainted/edited image
   layers: Layer[];
   analysis: DetectionResult | null;
   isAnalyzing: boolean;
@@ -91,6 +92,7 @@ export default function App() {
         id,
         name: f.name,
         originalUrl: URL.createObjectURL(f),
+        inpaintedUrl: null,
         layers: [],
         analysis: null,
         isAnalyzing: true,
@@ -229,7 +231,8 @@ export default function App() {
     const drawCanvas = () => {
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.src = selectedFile.originalUrl;
+      // Use inpainted version if available, otherwise use original
+      img.src = selectedFile.inpaintedUrl || selectedFile.originalUrl;
       
       img.onload = () => {
         const container = stageRef.current;
@@ -399,7 +402,7 @@ export default function App() {
   };
 
   const deleteLayer = async (layerId: string) => {
-    if (!selectedFile || !canvasRef.current) return;
+    if (!selectedFile) return;
     
     const layer = selectedFile.layers.find(l => l.id === layerId);
     if (!layer) return;
@@ -412,15 +415,23 @@ export default function App() {
 
     setIsInpainting(true);
     try {
-      const canvas = canvasRef.current;
-      
-      // Validate canvas
-      if (!canvas.width || !canvas.height) {
-        throw new Error("Canvas dimensions are invalid. Please make sure an image is loaded.");
-      }
+      // Load the current image (original or inpainted)
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = selectedFile.inpaintedUrl || selectedFile.originalUrl;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Failed to get canvas context");
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      // Create a full-resolution canvas with the current image
+      const fullCanvas = document.createElement("canvas");
+      fullCanvas.width = img.width;
+      fullCanvas.height = img.height;
+      const fullCtx = fullCanvas.getContext("2d");
+      if (!fullCtx) throw new Error("Failed to get full canvas context");
+      fullCtx.drawImage(img, 0, 0);
 
       // Create mask from the layer area
       const regions = [{
@@ -430,42 +441,32 @@ export default function App() {
         height: layer.height
       }];
 
-      console.log(`Creating mask for layer: ${layer.name}`);
-      const maskCanvas = createMask(canvas.width, canvas.height, regions);
+      console.log(`Creating mask for layer: ${layer.name} at full resolution`);
+      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, regions);
       
       console.log("Dilating mask...");
       const dilatedMask = dilateMask(maskCanvas, 2);
 
-      // Perform inpainting
+      // Perform inpainting on full resolution
       console.log("Starting inpainting process...");
       const inpaintedCanvas = await inpaintImage({
-        canvas,
+        canvas: fullCanvas,
         mask: dilatedMask,
         method: "telea",
       });
 
-      console.log("Inpainting complete, updating canvas...");
-      // Update canvas with inpainted result
-      const inpaintedCtx = inpaintedCanvas.getContext("2d");
-      const resultImageData = inpaintedCtx?.getImageData(
-        0,
-        0,
-        inpaintedCanvas.width,
-        inpaintedCanvas.height
-      );
-
-      if (resultImageData) {
-        ctx.putImageData(resultImageData, 0, 0);
-      } else {
-        throw new Error("Failed to get inpainted image data");
-      }
-
-      // Remove layer from the layer list
+      console.log("Inpainting complete, saving result...");
+      
+      // Convert inpainted canvas to data URL
+      const inpaintedUrl = inpaintedCanvas.toDataURL("image/png", 1.0);
+      
+      // Update file with new inpainted URL and remove the layer
       setFiles((prev: ManagedFile[]) =>
         prev.map((f: ManagedFile) =>
           f.id === selectedFileId
             ? {
                 ...f,
+                inpaintedUrl: inpaintedUrl,
                 layers: f.layers.filter((l: Layer) => l.id !== layerId),
               }
             : f
@@ -498,7 +499,7 @@ export default function App() {
   };
 
   const removeSelectedTexts = async () => {
-    if (!selectedFile || !canvasRef.current || selectedTextsToRemove.length === 0) return;
+    if (!selectedFile || selectedTextsToRemove.length === 0) return;
     if (!openCVLoaded) {
       alert("OpenCV is still loading. Please try again in a moment.");
       return;
@@ -506,17 +507,25 @@ export default function App() {
 
     setIsInpainting(true);
     try {
-      const canvas = canvasRef.current;
-      
-      // Validate canvas
-      if (!canvas.width || !canvas.height) {
-        throw new Error("Canvas dimensions are invalid. Please make sure an image is loaded.");
-      }
+      // Load the current image (original or inpainted)
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = selectedFile.inpaintedUrl || selectedFile.originalUrl;
 
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Failed to get canvas context");
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
 
-      // Create mask from selected text layers
+      // Create a full-resolution canvas with the current image
+      const fullCanvas = document.createElement("canvas");
+      fullCanvas.width = img.width;
+      fullCanvas.height = img.height;
+      const fullCtx = fullCanvas.getContext("2d");
+      if (!fullCtx) throw new Error("Failed to get full canvas context");
+      fullCtx.drawImage(img, 0, 0);
+
+      // Get text layers to remove
       const textLayers = selectedFile.layers.filter(
         l => l.type === "text" && selectedTextsToRemove.includes(l.id)
       );
@@ -525,42 +534,32 @@ export default function App() {
         throw new Error("No valid text layers selected");
       }
 
-      console.log(`Creating mask for ${textLayers.length} text layers...`);
-      const maskCanvas = createMask(canvas.width, canvas.height, textLayers);
+      console.log(`Creating mask for ${textLayers.length} text layers at full resolution...`);
+      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, textLayers);
       
       console.log("Dilating mask...");
       const dilatedMask = dilateMask(maskCanvas, 3);
 
-      // Perform inpainting
+      // Perform inpainting on full resolution
       console.log("Starting inpainting process...");
       const inpaintedCanvas = await inpaintImage({
-        canvas,
+        canvas: fullCanvas,
         mask: dilatedMask,
         method: "telea",
       });
 
-      console.log("Inpainting complete, updating canvas...");
-      // Update canvas with inpainted result
-      const inpaintedCtx = inpaintedCanvas.getContext("2d");
-      const resultImageData = inpaintedCtx?.getImageData(
-        0,
-        0,
-        inpaintedCanvas.width,
-        inpaintedCanvas.height
-      );
-
-      if (resultImageData) {
-        ctx.putImageData(resultImageData, 0, 0);
-      } else {
-        throw new Error("Failed to get inpainted image data");
-      }
-
-      // Remove text layers from the layer list
+      console.log("Inpainting complete, saving result...");
+      
+      // Convert inpainted canvas to data URL
+      const inpaintedUrl = inpaintedCanvas.toDataURL("image/png", 1.0);
+      
+      // Update file with new inpainted URL and remove text layers
       setFiles((prev: ManagedFile[]) =>
         prev.map((f: ManagedFile) =>
           f.id === selectedFileId
             ? {
                 ...f,
+                inpaintedUrl: inpaintedUrl,
                 layers: f.layers.filter(
                   (l: Layer) => !(l.type === "text" && selectedTextsToRemove.includes(l.id))
                 ),
@@ -1140,6 +1139,33 @@ export default function App() {
                   <span className="font-bold">{selectedFile.analysis?.codes.length || 0}</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Image Editing Status */}
+          {selectedFile && selectedFile.inpaintedUrl && (
+            <div className="p-4 rounded-xl bg-green-900/20 border border-green-700/50 space-y-3">
+              <h4 className="text-[10px] font-bold text-green-600 uppercase tracking-[0.2em] flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4" />
+                Edit History
+              </h4>
+              <p className="text-[8px] text-green-700">Image has been edited with inpainting</p>
+              <button 
+                onClick={() => {
+                  setFiles((prev: ManagedFile[]) =>
+                    prev.map((f: ManagedFile) =>
+                      f.id === selectedFileId
+                        ? { ...f, inpaintedUrl: null }
+                        : f
+                    )
+                  );
+                  console.log("Reset to original image");
+                }}
+                className="w-full py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:text-neutral-300 hover:border-neutral-600"
+              >
+                <RotateCcw className="w-3 h-3 inline mr-1" />
+                Reset to Original
+              </button>
             </div>
           )}
 
