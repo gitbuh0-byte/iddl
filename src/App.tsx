@@ -5,10 +5,11 @@ import {
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
   Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
-  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2, LogOut
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
+import { Login } from "./components/Login";
 
 interface DetectionResult {
   faces: Array<{ x: number; y: number; width: number; height: number; confidence: number }>;
@@ -52,6 +53,7 @@ interface ManagedFile {
 }
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [files, setFiles] = useState<ManagedFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [selectedLayerId, setSelectedLayerId] = useState<string | null>(null);
@@ -219,6 +221,12 @@ export default function App() {
     setFiles((prev: ManagedFile[]) => prev.filter((f: ManagedFile) => f.id !== id));
     if (selectedFileId === id) setSelectedFileId(null);
   };
+
+  // Check authentication on mount
+  useEffect(() => {
+    const isAuth = sessionStorage.getItem("isAuthenticated") === "true";
+    setIsAuthenticated(isAuth);
+  }, []);
 
   // Canvas drawing logic
   useEffect(() => {
@@ -687,7 +695,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] text-neutral-100 font-sans selection:bg-blue-500/30 flex flex-col h-screen overflow-hidden">
+    <>
+      {!isAuthenticated ? (
+        <Login onLoginSuccess={() => setIsAuthenticated(true)} />
+      ) : (
+        <div className="min-h-screen bg-[#050505] text-neutral-100 font-sans selection:bg-blue-500/30 flex flex-col h-screen overflow-hidden">
       {/* Header */}
       <header className="border-b border-neutral-800/50 bg-[#0a0a0a]/80 backdrop-blur-xl z-50 shrink-0">
         <div className="max-w-[1920px] mx-auto px-6 h-16 flex items-center justify-between">
@@ -788,6 +800,19 @@ export default function App() {
                 PSD
               </button>
             </div>
+
+            {/* Logout Button */}
+            <button
+              onClick={() => {
+                sessionStorage.removeItem("isAuthenticated");
+                setIsAuthenticated(false);
+              }}
+              className="flex items-center gap-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-red-500/30 ml-2"
+              title="Logout"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Logout
+            </button>
           </div>
         </div>
       </header>
@@ -1350,6 +1375,8 @@ export default function App() {
           </div>
         </div>
       </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }
