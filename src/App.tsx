@@ -5,7 +5,7 @@ import {
   User, FileText, Image as ImageIcon, Upload, Download, 
   Loader2, CheckCircle2, Shield, Eye, Trash2, Layers, 
   Square, MousePointer2, Eraser, Save, Plus, RotateCcw,
-  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2, LogOut
+  BarChart3, Zap, Smartphone, Code, CreditCard, Copy, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
@@ -84,9 +84,84 @@ export default function App() {
   const selectedFile = files.find(f => f.id === selectedFileId);
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
 
+  type HistorySnapshot = {
+    files: ManagedFile[];
+    selectedFileId: string | null;
+    selectedLayerId: string | null;
+    editMode: "add" | "edit" | null;
+    drawingLayer: "face" | "text" | "signature" | "code" | null;
+    isRemovingText: boolean;
+    selectedTextsToRemove: string[];
+    isInpainting: boolean;
+  };
+
+  const [undoStack, setUndoStack] = useState<HistorySnapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<HistorySnapshot[]>([]);
+  const canUndo = undoStack.length > 0;
+  const canRedo = redoStack.length > 0;
+
+  const cloneSnapshot = (snapshot: HistorySnapshot): HistorySnapshot => {
+    return JSON.parse(JSON.stringify(snapshot));
+  };
+
+  const captureSnapshot = (): HistorySnapshot => cloneSnapshot({
+    files,
+    selectedFileId,
+    selectedLayerId,
+    editMode,
+    drawingLayer,
+    isRemovingText,
+    selectedTextsToRemove,
+    isInpainting,
+  });
+
+  const pushSnapshot = () => {
+    setUndoStack((prev) => [...prev, captureSnapshot()]);
+  };
+
+  const clearRedoStack = () => {
+    setRedoStack([]);
+  };
+
+  const restoreSnapshot = (snapshot: HistorySnapshot) => {
+    setFiles(snapshot.files);
+    setSelectedFileId(snapshot.selectedFileId);
+    setSelectedLayerId(snapshot.selectedLayerId);
+    setEditMode(snapshot.editMode);
+    setDrawingLayer(snapshot.drawingLayer);
+    setIsRemovingText(snapshot.isRemovingText);
+    setSelectedTextsToRemove(snapshot.selectedTextsToRemove);
+    setIsInpainting(snapshot.isInpainting);
+  };
+
+  const handleUndo = () => {
+    if (!canUndo) return;
+    const previous = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, captureSnapshot()]);
+    restoreSnapshot(previous);
+  };
+
+  const handleRedo = () => {
+    if (!canRedo) return;
+    const nextState = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, captureSnapshot()]);
+    restoreSnapshot(nextState);
+  };
+
+  const updateFilesWithHistory = (updater: (prev: ManagedFile[]) => ManagedFile[]) => {
+    pushSnapshot();
+    clearRedoStack();
+    setFiles(updater);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
+
+    pushSnapshot();
+    clearRedoStack();
 
     selectedFiles.slice(0, 4 - files.length).forEach((f: File) => {
       const id = Math.random().toString(36).substring(2, 9);
@@ -197,6 +272,8 @@ export default function App() {
           });
         });
 
+        pushSnapshot();
+        clearRedoStack();
         setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
           f.id === fileId 
             ? { ...f, layers, analysis, isAnalyzing: false, isAnalyzed: true, isCompleted: true }
@@ -218,6 +295,8 @@ export default function App() {
   };
 
   const removeFile = (id: string) => {
+    pushSnapshot();
+    clearRedoStack();
     setFiles((prev: ManagedFile[]) => prev.filter((f: ManagedFile) => f.id !== id));
     if (selectedFileId === id) setSelectedFileId(null);
   };
@@ -396,6 +475,8 @@ export default function App() {
         opacity: 1,
       };
       
+      pushSnapshot();
+      clearRedoStack();
       setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
         f.id === selectedFileId 
           ? { ...f, layers: [...f.layers, newLayer] }
@@ -469,6 +550,8 @@ export default function App() {
       const inpaintedUrl = inpaintedCanvas.toDataURL("image/png", 1.0);
       
       // Update file with new inpainted URL and remove the layer
+      pushSnapshot();
+      clearRedoStack();
       setFiles((prev: ManagedFile[]) =>
         prev.map((f: ManagedFile) =>
           f.id === selectedFileId
@@ -495,7 +578,7 @@ export default function App() {
   };
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
-    setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
+    updateFilesWithHistory((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
       f.id === selectedFileId 
         ? { 
             ...f, 
@@ -562,6 +645,8 @@ export default function App() {
       const inpaintedUrl = inpaintedCanvas.toDataURL("image/png", 1.0);
       
       // Update file with new inpainted URL and remove text layers
+      pushSnapshot();
+      clearRedoStack();
       setFiles((prev: ManagedFile[]) =>
         prev.map((f: ManagedFile) =>
           f.id === selectedFileId
@@ -775,6 +860,26 @@ export default function App() {
 
             {/* Export Buttons */}
             <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={!canUndo}
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Undo
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={!canRedo}
+                className="flex items-center gap-2 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-50 text-white px-3 py-2 rounded-lg text-[9px] font-bold uppercase transition-all border border-neutral-700"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+                Redo
+              </button>
+            </div>
+            <div className="flex gap-2">
               <button 
                 onClick={() => exportAsset("png")}
                 disabled={!selectedFile || isExporting}
@@ -981,7 +1086,7 @@ export default function App() {
                     min="-10" 
                     max="10" 
                     value={selectedFile.adjustments.brightness}
-                    onChange={(e) => setFiles(prev => prev.map(f => 
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f => 
                       f.id === selectedFileId 
                         ? { ...f, adjustments: { ...f.adjustments, brightness: Number(e.target.value) } }
                         : f
@@ -996,7 +1101,7 @@ export default function App() {
                     min="-10" 
                     max="10" 
                     value={selectedFile.adjustments.contrast}
-                    onChange={(e) => setFiles(prev => prev.map(f => 
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f => 
                       f.id === selectedFileId 
                         ? { ...f, adjustments: { ...f.adjustments, contrast: Number(e.target.value) } }
                         : f
@@ -1011,7 +1116,7 @@ export default function App() {
                     min="-10" 
                     max="10" 
                     value={selectedFile.adjustments.saturation}
-                    onChange={(e) => setFiles(prev => prev.map(f => 
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f => 
                       f.id === selectedFileId 
                         ? { ...f, adjustments: { ...f.adjustments, saturation: Number(e.target.value) } }
                         : f
@@ -1177,6 +1282,8 @@ export default function App() {
               <p className="text-[8px] text-green-700">Image has been edited with inpainting</p>
               <button 
                 onClick={() => {
+                  pushSnapshot();
+                  clearRedoStack();
                   setFiles((prev: ManagedFile[]) =>
                     prev.map((f: ManagedFile) =>
                       f.id === selectedFileId
