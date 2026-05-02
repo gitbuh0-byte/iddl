@@ -1386,7 +1386,7 @@ export default function App() {
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <ImageIcon className="w-5 h-5 text-white" />
@@ -1406,11 +1406,11 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex flex-wrap items-center gap-2 justify-end">
+          <div className="flex flex-wrap items-center gap-1.5 justify-end">
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-2 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1420,56 +1420,56 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 border border-neutral-700 text-neutral-200 px-2 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-1 rounded-full text-[8px] font-bold uppercase transition hover:bg-neutral-700"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
 
-            <div className="flex items-center gap-1 bg-[var(--panel)] rounded-full p-1 border border-[var(--panel-border)]">
+            <div className="flex items-center gap-0.5 bg-[var(--panel)] rounded-full p-0.5">
               <button
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
-                className={`p-1 rounded-full transition ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <MousePointer2 className="w-3.5 h-3.5" />
+                <MousePointer2 className="w-3 h-3" />
               </button>
               <button
                 title="Face region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <User className="w-3.5 h-3.5" />
+                <User className="w-3 h-3" />
               </button>
               <button
                 title="Text region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <FileText className="w-3.5 h-3.5" />
+                <FileText className="w-3 h-3" />
               </button>
               <button
                 title="Signature region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Eraser className="w-3.5 h-3.5" />
+                <Eraser className="w-3 h-3" />
               </button>
               <button
                 title="Code region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`p-1 rounded-full transition ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Code className="w-3.5 h-3.5" />
+                <Code className="w-3 h-3" />
               </button>
               <button
                 title="Remove text"
                 onClick={() => setIsRemovingText(!isRemovingText)}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`p-1 rounded-full transition disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`p-0.5 rounded-full transition disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white" : "text-neutral-400 hover:text-white"}`}
               >
-                <Wand2 className="w-4 h-4" />
+                <Wand2 className="w-3 h-3" />
               </button>
             </div>
 
@@ -1477,19 +1477,19 @@ export default function App() {
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="p-1.5 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+              className="p-1 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
             >
-              <Upload className="w-3.5 h-3.5" />
+              <Upload className="w-3 h-3" />
             </button>
 
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="p-1.5 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
+                className="p-1 rounded-full bg-neutral-800/80 border border-neutral-700 text-neutral-200 transition hover:bg-neutral-700"
                 title="More actions"
               >
-                <MoreHorizontal className="w-3.5 h-3.5" />
+                <MoreHorizontal className="w-3 h-3" />
               </button>
               {showHeaderMenu && (
                 <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-[var(--surface)] border border-[var(--panel-border)] shadow-2xl p-2 z-50">
