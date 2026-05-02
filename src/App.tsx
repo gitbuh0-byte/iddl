@@ -1385,28 +1385,23 @@ export default function App() {
       ) : (
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-[var(--panel-border)] bg-[var(--surface)]/80 backdrop-blur-xl z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <header className="border-b border-neutral-800/60 bg-[var(--bg)]/95 backdrop-blur-sm z-50 shrink-0">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-blue-400 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-              <ImageIcon className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-2xl bg-slate-950 border border-neutral-700 flex items-center justify-center">
+              <ImageIcon className="w-4 h-4 text-white" />
             </div>
             <div className="hidden sm:block">
-              <span className="font-bold text-base tracking-tight block leading-none">Photo Studio</span>
-              <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-mono">AI-Powered Editor v1.0</span>
-            </div>
-            {/* OpenCV Status */}
-            <div className="ml-4 pl-4 border-l border-neutral-700">
-              <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${openCVLoaded ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'}`}></div>
-                <span className="text-[9px] text-neutral-400 uppercase font-mono">
-                  {openCVLoaded ? 'OpenCV Ready' : 'Loading...'}
-                </span>
-              </div>
+              <span className="font-semibold text-sm tracking-tight block leading-none">Photo Studio</span>
+              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.3em] font-mono">AI editor</span>
             </div>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-1 justify-end">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/80 bg-neutral-950/80 px-2 py-1 text-[8px] uppercase tracking-[0.3em] text-neutral-400">
+              <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
+              <span>{openCVLoaded ? 'OpenCV Ready' : 'Loading...'}</span>
+            </div>
+
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
@@ -1492,13 +1487,13 @@ export default function App() {
                 <MoreHorizontal className="w-3 h-3" />
               </button>
               {showHeaderMenu && (
-                <div className="absolute right-0 mt-2 w-60 rounded-3xl bg-[var(--surface)] border border-[var(--panel-border)] shadow-2xl p-2 z-50">
+                <div className="absolute right-0 mt-2 w-52 rounded-3xl bg-[var(--surface)]/95 border border-[var(--panel-border)] shadow-2xl p-1.5 z-50">
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
                       onClick={() => addTextLayer("New Text")}
                       disabled={!selectedFile}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Text
@@ -1507,7 +1502,7 @@ export default function App() {
                       type="button"
                       onClick={() => addSignatureLayer()}
                       disabled={!selectedFile}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Eraser className="w-3.5 h-3.5" />
                       Sign
@@ -1516,7 +1511,7 @@ export default function App() {
                       type="button"
                       onClick={copyLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       Copy
@@ -1525,7 +1520,7 @@ export default function App() {
                       type="button"
                       onClick={cutLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Cut
@@ -1534,7 +1529,7 @@ export default function App() {
                       type="button"
                       onClick={pasteLayer}
                       disabled={!clipboardLayer || !selectedFile}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <Clipboard className="w-3.5 h-3.5" />
                       Paste
@@ -1549,7 +1544,7 @@ export default function App() {
                       type="button"
                       onClick={handleUndo}
                       disabled={!canUndo}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Undo
@@ -1558,7 +1553,7 @@ export default function App() {
                       type="button"
                       onClick={handleRedo}
                       disabled={!canRedo}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <ArrowRight className="w-3.5 h-3.5" />
                       Redo
@@ -1567,7 +1562,7 @@ export default function App() {
                       type="button"
                       onClick={() => exportAsset("png")}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       PNG
@@ -1576,7 +1571,7 @@ export default function App() {
                       type="button"
                       onClick={() => exportAsset("jpg")}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-neutral-900/80 text-[10px] font-bold uppercase border border-neutral-700 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       JPG
@@ -1585,7 +1580,7 @@ export default function App() {
                       type="button"
                       onClick={() => exportAsset("psd")}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-2 px-2 py-2 rounded-xl bg-blue-600 text-[10px] font-bold uppercase border border-blue-500 text-white hover:bg-blue-500 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-blue-600 text-[10px] font-semibold uppercase border border-blue-500 text-white hover:bg-blue-500 disabled:opacity-50"
                     >
                       <Download className="w-3.5 h-3.5" />
                       PSD
@@ -1623,10 +1618,10 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-b lg:border-b-0 lg:border-r border-neutral-800/60 bg-[var(--surface)] shrink-0 max-h-[30vh] lg:max-h-none`}>
-          <div className="p-2 border-b border-neutral-800/30 flex items-center justify-between flex-shrink-0">
-            <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-[0.25em]">Library</span>
-            <span className="bg-[var(--panel)] border border-[var(--panel-border)] text-[8px] text-[var(--muted)] px-2 py-0.5 rounded font-mono">{files.length}/4</span>
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-r border-neutral-800/50 bg-[var(--surface)]/85 shrink-0 max-h-[30vh] lg:max-h-none`}>
+          <div className="px-3 py-3 border-b border-neutral-800/30 flex items-center justify-between">
+            <span className="text-[8px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Library</span>
+            <span className="text-[8px] text-neutral-400 border border-neutral-700 rounded px-2 py-0.5">{files.length}/4</span>
           </div>
           
           <div className="flex-1 overflow-y-auto p-2 space-y-2">
@@ -1634,7 +1629,7 @@ export default function App() {
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[4/3] rounded-lg overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 shadow-[0_0_10px_-6px_rgba(59,130,246,0.2)]" : "border-neutral-700 hover:border-neutral-600"}`}
+                className={`group relative aspect-[4/3] min-h-[112px] rounded-2xl overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 ring-1 ring-blue-500/20" : "border-neutral-700 hover:border-neutral-600"}`}
               >
                 <img src={file.originalUrl} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-neutral-950/30 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1668,12 +1663,12 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[4/3] rounded-lg border border-dashed border-neutral-700 flex flex-col items-center justify-center gap-1 text-neutral-500 hover:text-blue-400 hover:border-blue-500/40 hover:bg-blue-500/6 transition-all text-[7px] font-semibold uppercase tracking-[0.3em]"
+                className="w-full aspect-[4/3] min-h-[112px] rounded-2xl border border-dashed border-neutral-700/60 bg-neutral-950/40 flex flex-col items-center justify-center gap-1 text-neutral-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.25em]"
               >
-                <div className="p-1.5 bg-neutral-900 rounded-lg">
-                  <Plus className="w-2.5 h-2.5" />
+                <div className="p-2 rounded-2xl bg-neutral-900">
+                  <Plus className="w-3 h-3" />
                 </div>
-                <span className="text-[7px] font-semibold">Upload</span>
+                <span className="text-[8px] font-semibold">Upload</span>
               </button>
             )}
           </div>
@@ -1682,13 +1677,13 @@ export default function App() {
         </div>
 
         {/* Center: Canvas */}
-        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-3 lg:p-5">
+        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-3 lg:p-4">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#111_0%,_transparent_70%)] pointer-events-none" />
           
           {selectedFile ? (
             <div 
               ref={stageRef}
-              className="relative rounded-3xl shadow-[0_12px_24px_-12px_rgba(0,0,0,0.45)] overflow-hidden bg-neutral-900 border border-neutral-700/20 w-full max-w-3xl"
+              className="relative rounded-3xl overflow-hidden bg-[#080a12] border border-neutral-700/20 shadow-[0_12px_26px_-18px_rgba(0,0,0,0.45)] w-full max-w-2xl"
             >
               <canvas 
                 ref={canvasRef}
@@ -1776,9 +1771,9 @@ export default function App() {
               </AnimatePresence>
 
               <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="px-3 py-1 bg-black/60 backdrop-blur border border-neutral-800/30 rounded-full flex items-center gap-2">
+                <div className="px-2 py-0.5 bg-black/55 backdrop-blur border border-neutral-800/30 rounded-full flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-tighter">Live Editor</span>
+                  <span className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em]">Live</span>
                 </div>
               </div>
             </div>
@@ -1799,11 +1794,11 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/40 bg-[var(--surface)] p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/30 bg-[var(--surface)]/90 p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
-            <div className="space-y-2.5">
-              <h4 className="text-[8px] font-bold text-neutral-500 uppercase tracking-[0.25em]">Adjustments</h4>
+            <div className="space-y-2">
+              <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em]">Adjustments</h4>
               
               <div className="space-y-2 lg:space-y-3">
                 <div>
@@ -1857,22 +1852,22 @@ export default function App() {
 
           {/* Base Image Controls */}
           {selectedBaseImage && selectedFile && !selectedLayer && (
-            <div className="space-y-4 p-4 rounded-2xl bg-neutral-900/30 border border-neutral-800">
-              <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Base Image Edit</h4>
-              <div className="space-y-3">
+            <div className="space-y-3 p-3 rounded-2xl bg-neutral-900/25 border border-neutral-800/40">
+              <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.22em]">Base Image Edit</h4>
+              <div className="space-y-2.5">
                 <div>
-                  <label className="text-[9px] font-bold text-neutral-500 uppercase mb-1 block">Crop X</label>
+                  <label className="text-[9px] font-semibold text-neutral-500 uppercase mb-1 block">Crop X</label>
                   <input
                     type="range"
                     min="0"
                     max="1"
                     step="0.01"
                     value={selectedFile.crop?.x ?? 0}
-                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
-                      f.id === selectedFileId
-                        ? { ...f, crop: { ...f.crop, x: Number(e.target.value) } }
-                        : f
-                    ))}
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f => {
+                      if (f.id !== selectedFileId) return f;
+                      const crop = f.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+                      return { ...f, crop: { ...crop, x: Number(e.target.value) } };
+                    }))}
                     className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
                   />
                   <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.x ?? 0) * 100).toFixed(0)}%</span>
@@ -1885,11 +1880,11 @@ export default function App() {
                     max="1"
                     step="0.01"
                     value={selectedFile.crop?.y ?? 0}
-                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
-                      f.id === selectedFileId
-                        ? { ...f, crop: { ...f.crop, y: Number(e.target.value) } }
-                        : f
-                    ))}
+                    onChange={(e) => updateFilesWithHistory(prev => prev.map(f => {
+                      if (f.id !== selectedFileId) return f;
+                      const crop = f.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+                      return { ...f, crop: { ...crop, y: Number(e.target.value) } };
+                    }))}
                     className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
                   />
                   <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.y ?? 0) * 100).toFixed(0)}%</span>
@@ -1903,11 +1898,11 @@ export default function App() {
                       max="1"
                       step="0.01"
                       value={selectedFile.crop?.width ?? 1}
-                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
-                        f.id === selectedFileId
-                          ? { ...f, crop: { ...f.crop, width: Number(e.target.value) } }
-                          : f
-                      ))}
+                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f => {
+                        if (f.id !== selectedFileId) return f;
+                        const crop = f.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+                        return { ...f, crop: { ...crop, width: Number(e.target.value) } };
+                      }))}
                       className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
                     />
                     <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.width ?? 1) * 100).toFixed(0)}%</span>
@@ -1920,11 +1915,11 @@ export default function App() {
                       max="1"
                       step="0.01"
                       value={selectedFile.crop?.height ?? 1}
-                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f =>
-                        f.id === selectedFileId
-                          ? { ...f, crop: { ...f.crop, height: Number(e.target.value) } }
-                          : f
-                      ))}
+                      onChange={(e) => updateFilesWithHistory(prev => prev.map(f => {
+                        if (f.id !== selectedFileId) return f;
+                        const crop = f.crop ?? { x: 0, y: 0, width: 1, height: 1 };
+                        return { ...f, crop: { ...crop, height: Number(e.target.value) } };
+                      }))}
                       className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
                     />
                     <span className="text-[8px] text-neutral-600">{((selectedFile.crop?.height ?? 1) * 100).toFixed(0)}%</span>
