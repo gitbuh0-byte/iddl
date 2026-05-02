@@ -85,7 +85,7 @@ export default function App() {
     const selectedFiles = Array.from(e.target.files || []) as File[];
     if (selectedFiles.length === 0) return;
 
-    selectedFiles.slice(0, 4 - files.length).forEach(f => {
+    selectedFiles.slice(0, 4 - files.length).forEach((f: File) => {
       const id = Math.random().toString(36).substring(2, 9);
       const newFile: ManagedFile = {
         id,
@@ -100,7 +100,7 @@ export default function App() {
         adjustments: { brightness: 0, contrast: 0, saturation: 0 }
       };
       
-      setFiles(prev => [...prev, newFile]);
+      setFiles((prev: ManagedFile[]) => [...prev, newFile]);
       if (!selectedFileId) setSelectedFileId(id);
 
       // Auto-analyze image
@@ -193,7 +193,7 @@ export default function App() {
           });
         });
 
-        setFiles(prev => prev.map(f => 
+        setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
           f.id === fileId 
             ? { ...f, layers, analysis, isAnalyzing: false, isAnalyzed: true, isCompleted: true }
             : f
@@ -205,7 +205,7 @@ export default function App() {
       }
     } catch (error) {
       console.error("Analysis error:", error);
-      setFiles(prev => prev.map(f => 
+      setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
         f.id === fileId 
           ? { ...f, isAnalyzing: false, isAnalyzed: false }
           : f
@@ -214,7 +214,7 @@ export default function App() {
   };
 
   const removeFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+    setFiles((prev: ManagedFile[]) => prev.filter((f: ManagedFile) => f.id !== id));
     if (selectedFileId === id) setSelectedFileId(null);
   };
 
@@ -246,7 +246,7 @@ export default function App() {
         ctx.filter = "none";
 
         // Draw layers
-        selectedFile.layers.forEach(layer => {
+        selectedFile.layers.forEach((layer: Layer) => {
           if (!layer.visible) return;
 
           const x = layer.x * canvas.width;
@@ -264,7 +264,7 @@ export default function App() {
             custom: { fill: "rgba(107, 114, 128, 0.3)", stroke: "#6b7280" },
           };
 
-          const color = colors[layer.type];
+          const color = colors[layer.type as keyof typeof colors];
           ctx.fillStyle = color.fill;
           ctx.strokeStyle = color.stroke;
           ctx.lineWidth = selectedLayer?.id === layer.id ? 3 : 2;
@@ -291,18 +291,20 @@ export default function App() {
         // Draw new layer being created
         if (isDragging && dragStart && currentDrag && drawingLayer) {
           ctx.globalAlpha = 0.5;
-          ctx.fillStyle = {
+          const fillColors: Record<string, string> = {
             face: "rgba(59, 130, 246, 0.3)",
             text: "rgba(239, 68, 68, 0.3)",
             signature: "rgba(168, 85, 247, 0.3)",
             code: "rgba(34, 197, 94, 0.3)",
-          }[drawingLayer] || "rgba(107, 114, 128, 0.3)";
-          ctx.strokeStyle = {
+          };
+          ctx.fillStyle = fillColors[drawingLayer] || "rgba(107, 114, 128, 0.3)";
+          const strokeColors: Record<string, string> = {
             face: "#3b82f6",
             text: "#ef4444",
             signature: "#a855f7",
             code: "#22c55e",
-          }[drawingLayer] || "#6b7280";
+          };
+          ctx.strokeStyle = strokeColors[drawingLayer] || "#6b7280";
           
           const dx = Math.min(dragStart.x, currentDrag.x) * canvas.width;
           const dy = Math.min(dragStart.y, currentDrag.y) * canvas.height;
@@ -383,7 +385,7 @@ export default function App() {
         opacity: 1,
       };
       
-      setFiles(prev => prev.map(f => 
+      setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
         f.id === selectedFileId 
           ? { ...f, layers: [...f.layers, newLayer] }
           : f
@@ -398,9 +400,9 @@ export default function App() {
 
   const deleteLayer = (layerId: string) => {
     // Delete layer from selected file
-    setFiles(prev => prev.map(f => 
+    setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
       f.id === selectedFileId 
-        ? { ...f, layers: f.layers.filter(l => l.id !== layerId) }
+        ? { ...f, layers: f.layers.filter((l: Layer) => l.id !== layerId) }
         : f
     ));
     // Clear selection if deleted layer was selected
@@ -409,11 +411,11 @@ export default function App() {
   };
 
   const updateLayer = (layerId: string, updates: Partial<Layer>) => {
-    setFiles(prev => prev.map(f => 
+    setFiles((prev: ManagedFile[]) => prev.map((f: ManagedFile) => 
       f.id === selectedFileId 
         ? { 
             ...f, 
-            layers: f.layers.map(l => l.id === layerId ? { ...l, ...updates } : l)
+            layers: f.layers.map((l: Layer) => l.id === layerId ? { ...l, ...updates } : l)
           }
         : f
     ));
@@ -479,13 +481,13 @@ export default function App() {
       }
 
       // Remove text layers from the layer list
-      setFiles(prev =>
-        prev.map(f =>
+      setFiles((prev: ManagedFile[]) =>
+        prev.map((f: ManagedFile) =>
           f.id === selectedFileId
             ? {
                 ...f,
                 layers: f.layers.filter(
-                  l => !(l.type === "text" && selectedTextsToRemove.includes(l.id))
+                  (l: Layer) => !(l.type === "text" && selectedTextsToRemove.includes(l.id))
                 ),
               }
             : f
@@ -914,7 +916,7 @@ export default function App() {
                   <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
                 </div>
               ) : (
-                selectedFile?.layers.map((layer) => (
+                selectedFile?.layers.map((layer: Layer) => (
                   <div 
                     key={layer.id}
                     onClick={() => setSelectedLayerId(layer.id)}
@@ -1062,7 +1064,7 @@ export default function App() {
                           <input 
                             type="checkbox"
                             checked={selectedTextsToRemove.includes(layer.id)}
-                            onChange={(e) => {
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                               if (e.target.checked) {
                                 setSelectedTextsToRemove([...selectedTextsToRemove, layer.id]);
                               } else {
@@ -1143,7 +1145,7 @@ export default function App() {
               {generatedDLPackages.length > 0 && (
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto">
                   <p className="text-[8px] text-neutral-600 uppercase font-bold">Generated Packages:</p>
-                  {generatedDLPackages.map((pkg, index) => (
+                  {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
                       className="p-3 rounded-lg bg-neutral-800/50 border border-neutral-700 hover:border-neutral-600 transition-all space-y-2"

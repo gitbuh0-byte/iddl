@@ -7,7 +7,7 @@ import { writePsd } from "ag-psd";
 import * as tf from "@tensorflow/tfjs";
 import "@tensorflow/tfjs-backend-cpu";
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import Jimp from "jimp";
+import { Jimp } from "jimp";
 import Tesseract from "tesseract.js";
 
 const upload = multer({ dest: "uploads/" });
@@ -186,7 +186,7 @@ async function analyzeImage(imagePath: string): Promise<DetectionResult> {
     console.log(`Image size: ${imgWidth}x${imgHeight}`);
 
     // Analyze image properties
-    const { data: pixelData } = image.bitmap;
+    const pixelData = new Uint8ClampedArray(image.bitmap.data);
     const colorCounts: { [key: string]: number } = {};
     let dominantColor = "#ffffff";
     let maxCount = 0;
