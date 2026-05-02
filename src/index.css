@@ -7,33 +7,33 @@
 
 :root {
   color-scheme: dark;
-  --bg: #0f0f1e;
-  --bg-secondary: #1a1a2e;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-strong: rgba(255, 255, 255, 0.08);
-  --surface-hover: rgba(255, 255, 255, 0.12);
-  --text: #ffffff;
-  --text-secondary: #b8bcc9;
+  --bg: #090c14;
+  --bg-secondary: #111827;
+  --surface: #111827;
+  --surface-strong: #141d2e;
+  --surface-hover: #1f2937;
+  --text: #e5e7eb;
+  --text-secondary: #9ca3af;
   --muted: #6b7280;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-light: rgba(255, 255, 255, 0.04);
-  --accent: #00d9ff;
-  --accent-purple: #a855f7;
+  --border: rgba(148, 163, 184, 0.2);
+  --border-light: rgba(148, 163, 184, 0.12);
+  --accent: #38bdf8;
+  --accent-purple: #c084fc;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --bg: #f8f9fa;
+  --bg: #f8fafc;
   --bg-secondary: #ffffff;
-  --surface: rgba(0, 0, 0, 0.04);
-  --surface-strong: rgba(0, 0, 0, 0.06);
-  --surface-hover: rgba(0, 0, 0, 0.08);
-  --text: #0a0a0a;
-  --text-secondary: #626262;
-  --muted: #9ca3af;
-  --border: rgba(0, 0, 0, 0.06);
-  --border-light: rgba(0, 0, 0, 0.03);
-  --accent: #0066cc;
+  --surface: #f8fafc;
+  --surface-strong: #e5e7eb;
+  --surface-hover: #d1d5db;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --muted: #6b7280;
+  --border: rgba(15, 23, 42, 0.12);
+  --border-light: rgba(15, 23, 42, 0.08);
+  --accent: #0284c7;
   --accent-purple: #7c3aed;
 }
 
@@ -53,9 +53,6 @@ body {
   width: 100%;
   height: 100%;
   background: var(--bg);
-  background-image: 
-    radial-gradient(circle at 20% 50%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(0, 217, 255, 0.08) 0%, transparent 50%);
   color: var(--text);
   font-family: "Inter", system-ui, sans-serif;
   letter-spacing: 0.3px;
@@ -79,11 +76,10 @@ select {
 }
 
 ::selection {
-  background: rgba(0, 217, 255, 0.2);
+  background: rgba(56, 189, 248, 0.2);
   color: var(--text);
 }
 
-/* Glassmorphism base styling */
 h1, h2, h3, h4, h5, h6 {
   font-family: "Syne", sans-serif;
   font-weight: 700;
@@ -96,41 +92,31 @@ h2 { font-size: 2rem; }
 h3 { font-size: 1.5rem; }
 h4 { font-size: 1.25rem; }
 
-/* Glassmorphism components */
 .glass, .panel, .surface {
   background: var(--surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 1.5rem;
 }
 
 .glass:hover, .panel:hover {
-  background: var(--surface-hover);
-  border-color: var(--border);
-  transition: all 0.3s ease;
+  background: var(--surface-strong);
 }
 
-/* Buttons with glassmorphism */
 button {
   background: var(--surface-strong);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  padding: 0.75rem 1.1rem;
   cursor: pointer;
   font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   color: var(--text);
 }
 
 button:hover {
   background: var(--surface-hover);
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 217, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 button:active {
@@ -138,29 +124,24 @@ button:active {
 }
 
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
-/* Inputs with glassmorphism */
 input, textarea, select {
-  background: var(--surface);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--surface-strong);
   border: 1px solid var(--border-light);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 0.75rem;
-  transition: all 0.3s ease;
+  transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
   border-color: var(--accent);
-  background: var(--surface-strong);
-  box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+  background: var(--surface-hover);
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -171,22 +152,21 @@ input:focus, textarea:focus, select:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(148, 163, 184, 0.22);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(148, 163, 184, 0.32);
 }
 
-/* Mobile responsive */
 @media (max-width: 1024px) {
   h1 { font-size: 2rem; }
   h2 { font-size: 1.5rem; }
   h3 { font-size: 1.25rem; }
   
   button, input, textarea, select {
-    padding: 0.625rem 1rem;
+    padding: 0.65rem 0.95rem;
     font-size: 1rem;
   }
   
@@ -201,7 +181,7 @@ input:focus, textarea:focus, select:focus {
   h3 { font-size: 1rem; }
   
   button, input, textarea, select {
-    padding: 0.5rem 0.875rem;
+    padding: 0.55rem 0.85rem;
     font-size: 0.95rem;
   }
   

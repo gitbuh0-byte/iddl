@@ -1385,7 +1385,7 @@ export default function App() {
       ) : (
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-neutral-800/60 bg-[var(--bg)]/95 backdrop-blur-sm z-50 shrink-0">
+      <header className="border-b border-neutral-800/30 bg-[var(--bg)] z-50 shrink-0">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-2xl bg-slate-950 border border-neutral-700 flex items-center justify-center">
@@ -1397,7 +1397,7 @@ export default function App() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/80 bg-neutral-950/80 px-2 py-1 text-[8px] uppercase tracking-[0.3em] text-neutral-400">
+            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/50 bg-[var(--surface-strong)] px-2 py-1 text-[8px] uppercase tracking-[0.3em] text-neutral-400">
               <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
               <span>{openCVLoaded ? 'OpenCV Ready' : 'Loading...'}</span>
             </div>
@@ -1405,7 +1405,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-[var(--surface-strong)] border border-neutral-700/30 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-[var(--surface-hover)]"
               title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
             >
               {viewMode === "editor" ? <Eye className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
@@ -1415,14 +1415,14 @@ export default function App() {
             <button
               type="button"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="flex items-center gap-1 bg-neutral-800/80 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-neutral-700"
+              className="flex items-center gap-1 bg-[var(--surface-strong)] border border-neutral-700/30 text-neutral-200 px-1.5 py-0.5 rounded-full text-[6px] font-semibold uppercase tracking-[0.2em] transition hover:bg-[var(--surface-hover)]"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
               <span>{theme === "dark" ? "Light" : "Dark"}</span>
             </button>
 
-            <div className="flex items-center gap-0.5 bg-[var(--panel)] rounded-full p-0.5">
+            <div className="flex items-center gap-0.5 bg-[var(--bg-secondary)] rounded-full p-0.5 border border-neutral-800/40">
               <button
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
@@ -1472,7 +1472,7 @@ export default function App() {
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="p-1 rounded-full bg-neutral-800/80 text-neutral-200 transition hover:bg-neutral-700"
+              className="p-1 rounded-full bg-[var(--surface-strong)] text-neutral-200 border border-neutral-700/30 transition hover:bg-[var(--surface-hover)]"
             >
               <Upload className="w-3 h-3" />
             </button>
@@ -1481,19 +1481,19 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="p-1 rounded-full bg-neutral-800/80 text-neutral-200 transition hover:bg-neutral-700"
+                className="p-1 rounded-full bg-[var(--surface-strong)] text-neutral-200 border border-neutral-700/30 transition hover:bg-[var(--surface-hover)]"
                 title="More actions"
               >
                 <MoreHorizontal className="w-3 h-3" />
               </button>
               {showHeaderMenu && (
-                <div className="absolute right-0 mt-2 w-52 rounded-3xl bg-[var(--surface)]/95 border border-[var(--panel-border)] shadow-2xl p-1.5 z-50">
+                <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-[var(--bg-secondary)] border border-neutral-800/30 p-2 z-50">
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
                       onClick={() => addTextLayer("New Text")}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Text
@@ -1502,7 +1502,7 @@ export default function App() {
                       type="button"
                       onClick={() => addSignatureLayer()}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <Eraser className="w-3.5 h-3.5" />
                       Sign
@@ -1511,7 +1511,7 @@ export default function App() {
                       type="button"
                       onClick={copyLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <Copy className="w-3.5 h-3.5" />
                       Copy
@@ -1520,7 +1520,7 @@ export default function App() {
                       type="button"
                       onClick={cutLayer}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Cut
@@ -1529,7 +1529,7 @@ export default function App() {
                       type="button"
                       onClick={pasteLayer}
                       disabled={!clipboardLayer || !selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <Clipboard className="w-3.5 h-3.5" />
                       Paste
@@ -1544,7 +1544,7 @@ export default function App() {
                       type="button"
                       onClick={handleUndo}
                       disabled={!canUndo}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Undo
@@ -1553,7 +1553,7 @@ export default function App() {
                       type="button"
                       onClick={handleRedo}
                       disabled={!canRedo}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <ArrowRight className="w-3.5 h-3.5" />
                       Redo
@@ -1562,7 +1562,7 @@ export default function App() {
                       type="button"
                       onClick={() => exportAsset("png")}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       PNG
@@ -1571,7 +1571,7 @@ export default function App() {
                       type="button"
                       onClick={() => exportAsset("jpg")}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-neutral-900/75 text-[10px] font-semibold uppercase border border-neutral-700/60 text-neutral-200 hover:bg-neutral-800 disabled:opacity-50"
+                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       JPG
@@ -1607,7 +1607,7 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-r border-neutral-800/50 bg-[var(--surface)]/85 shrink-0 max-h-[30vh] lg:max-h-none`}>
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-r border-neutral-800/30 bg-[var(--bg-secondary)] shrink-0 max-h-[30vh] lg:max-h-none`}>
           <div className="px-3 py-3 border-b border-neutral-800/30 flex items-center justify-between">
             <span className="text-[8px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Library</span>
             <span className="text-[8px] text-neutral-400 border border-neutral-700 rounded px-2 py-0.5">{files.length}/4</span>
@@ -1631,7 +1631,7 @@ export default function App() {
                 )}
 
                 {file.isAnalyzing && (
-                  <div className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm flex items-center justify-center">
+                  <div className="absolute inset-0 bg-neutral-950/80 flex items-center justify-center">
                     <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
                   </div>
                 )}
@@ -1717,7 +1717,7 @@ export default function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-neutral-950/80 backdrop-blur-xl flex flex-col items-center justify-center z-20"
+                    className="absolute inset-0 bg-neutral-950/80 flex flex-col items-center justify-center z-20"
                   >
                     <div className="relative">
                       <div className="w-20 h-20 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
@@ -1740,7 +1740,7 @@ export default function App() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-neutral-950/80 backdrop-blur-xl flex flex-col items-center justify-center z-20"
+                    className="absolute inset-0 bg-neutral-950/80 flex flex-col items-center justify-center z-20"
                   >
                     <div className="relative">
                       <div className="w-20 h-20 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
@@ -1760,7 +1760,7 @@ export default function App() {
               </AnimatePresence>
 
               <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="px-2 py-0.5 bg-black/55 backdrop-blur border border-neutral-800/30 rounded-full flex items-center gap-2">
+                <div className="px-2 py-0.5 bg-black/55 border border-neutral-800/30 rounded-full flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em]">Live</span>
                 </div>
@@ -1783,7 +1783,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/30 bg-[var(--surface)]/90 p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/30 bg-[var(--bg-secondary)] p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-2">
@@ -1931,14 +1931,14 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-3">
-            <h4 className="text-[8px] font-semibold text-neutral-500 uppercase tracking-[0.3em] flex items-center justify-between">
+            <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center justify-between">
               Detected Layers
               <span className="text-[7px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
             </h4>
             
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
               {selectedFile?.layers.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[var(--panel)]/80 border border-dashed border-[var(--panel-border)] flex flex-col items-center justify-center text-center">
+                <div className="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-dashed border-neutral-700/50 flex flex-col items-center justify-center text-center">
                   <Layers className="w-6 h-6 text-neutral-700 mb-3" />
                   <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-tight">No layers detected</p>
                   <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
@@ -1951,7 +1951,7 @@ export default function App() {
                     className={`group flex items-center gap-2 p-2 rounded-xl transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
                         ? "bg-neutral-800 border-neutral-700" 
-                        : "bg-[var(--panel)]/90 border-[var(--panel-border)] hover:border-[var(--text)]/20"
+                        : "bg-[var(--surface-strong)] border border-neutral-800/30 hover:border-neutral-600/40"
                     }`}
                   >
                     <div className={`p-1.5 rounded-lg flex-shrink-0 ${
@@ -1976,8 +1976,8 @@ export default function App() {
                       }[layer.type]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-[9px] font-bold text-neutral-300 uppercase truncate block">{layer.name}</span>
-                      <span className="text-[7px] text-neutral-600 font-mono">
+                      <span className="text-[9px] font-semibold text-neutral-200 truncate block">{layer.name}</span>
+                      <span className="text-[7px] text-neutral-500 font-mono">
                         {(layer.x * 100).toFixed(0)}%, {(layer.y * 100).toFixed(0)}%
                       </span>
                     </div>
@@ -1989,7 +1989,7 @@ export default function App() {
                         }
                       }}
                       disabled={isInpainting}
-                      className="opacity-0 group-hover:opacity-100 text-neutral-700 hover:text-red-500 transition-colors disabled:opacity-50"
+                      className="opacity-0 group-hover:opacity-100 text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-50"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -2400,7 +2400,7 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-2 rounded-xl bg-[var(--panel)]/80 border border-neutral-700/50 space-y-2">
+          <div className="p-2 rounded-xl bg-[var(--bg-secondary)] border border-neutral-700/50 space-y-2 overflow-visible">
             <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em] flex items-center gap-1.5">
               <CreditCard className="w-3 h-3" />
               DL Number Generator
@@ -2412,7 +2412,7 @@ export default function App() {
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="relative z-20 w-full px-2 py-1 rounded-lg bg-neutral-800 border border-neutral-700 text-[8px] font-semibold tracking-tight text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
+                  className="relative z-30 w-full px-2 py-1 rounded-lg bg-[var(--surface-strong)] border border-neutral-700 text-[8px] font-semibold tracking-tight text-neutral-300 leading-tight focus:border-blue-600 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
@@ -2436,7 +2436,7 @@ export default function App() {
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
-                      className="p-1.5 rounded-lg bg-neutral-800/50 border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
+                      className="p-1.5 rounded-lg bg-[var(--surface-strong)] border border-neutral-700/70 hover:border-neutral-600 transition-all space-y-2"
                     >
                       {/* DL Number */}
                       <div className="flex items-center justify-between gap-2">
