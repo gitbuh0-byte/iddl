@@ -62,6 +62,9 @@ interface ManagedFile {
   };
 }
 
+const REMOVABLE_LAYER_TYPES = new Set<Layer["type"]>(["face", "text", "signature", "code"]);
+const isRemovableLayer = (layer: Layer) => REMOVABLE_LAYER_TYPES.has(layer.type);
+
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [files, setFiles] = useState<ManagedFile[]>([]);
@@ -106,9 +109,9 @@ export default function App() {
     crop: { x: number; y: number; width: number; height: number };
   } | null>(null);
 
-  // Text removal state
+  // Component removal state
   const [isRemovingText, setIsRemovingText] = useState(false);
-  const [selectedTextsToRemove, setSelectedTextsToRemove] = useState<string[]>([]);
+  const [selectedComponentsToRemove, setSelectedComponentsToRemove] = useState<string[]>([]);
   const [isInpainting, setIsInpainting] = useState(false);
   const [openCVLoaded, setOpenCVLoaded] = useState(false);
 
@@ -269,7 +272,7 @@ export default function App() {
     editMode: "add" | "edit" | "select" | null;
     drawingLayer: "face" | "text" | "signature" | "code" | null;
     isRemovingText: boolean;
-    selectedTextsToRemove: string[];
+    selectedComponentsToRemove: string[];
     isInpainting: boolean;
   };
 
@@ -289,7 +292,7 @@ export default function App() {
     editMode,
     drawingLayer,
     isRemovingText,
-    selectedTextsToRemove,
+    selectedComponentsToRemove,
     isInpainting,
   });
 
@@ -308,7 +311,7 @@ export default function App() {
     setEditMode(snapshot.editMode);
     setDrawingLayer(snapshot.drawingLayer);
     setIsRemovingText(snapshot.isRemovingText);
-    setSelectedTextsToRemove(snapshot.selectedTextsToRemove);
+    setSelectedComponentsToRemove(snapshot.selectedComponentsToRemove);
     setIsInpainting(snapshot.isInpainting);
   };
 
@@ -1025,6 +1028,9 @@ export default function App() {
       if (selectedLayerId !== clickedLayer.id) {
         setSelectedLayerId(clickedLayer.id);
       }
+      if (isRemovingText && isRemovableLayer(clickedLayer)) {
+        setSelectedComponentsToRemove((prev) => prev.includes(clickedLayer.id) ? prev : [...prev, clickedLayer.id]);
+      }
 
       // Allow resizing for image, text, and signature layers
       if (!clickedLayer.locked && (clickedLayer.type === "image" || clickedLayer.type === "text" || clickedLayer.type === "signature")) {
@@ -1359,8 +1365,8 @@ export default function App() {
           : f
       ));
       setSelectedLayerId(newLayer.id);
-      if (isRemovingText && newLayer.type === "text") {
-        setSelectedTextsToRemove((prev) => prev.includes(newLayer.id) ? prev : [...prev, newLayer.id]);
+      if (isRemovingText && isRemovableLayer(newLayer)) {
+        setSelectedComponentsToRemove((prev) => prev.includes(newLayer.id) ? prev : [...prev, newLayer.id]);
       }
     }
 
@@ -1516,8 +1522,16 @@ export default function App() {
     console.log(`Updated layer: ${layerId}`, updates);
   };
 
-  const removeSelectedTexts = async () => {
-    if (!selectedFile || selectedTextsToRemove.length === 0) return;
+  const removeSelectedComponents = async () => {
+    if (!selectedFile) return;
+
+    const removalIds = selectedComponentsToRemove.length > 0
+      ? selectedComponentsToRemove
+      : selectedLayer && isRemovableLayer(selectedLayer)
+        ? [selectedLayer.id]
+        : [];
+
+    if (removalIds.length === 0) return;
     if (!openCVLoaded) {
       alert("OpenCV is still loading. Please try again in a moment.");
       return;
@@ -1543,17 +1557,17 @@ export default function App() {
       if (!fullCtx) throw new Error("Failed to get full canvas context");
       fullCtx.drawImage(img, 0, 0);
 
-      // Get text layers to remove
-      const textLayers = selectedFile.layers.filter(
-        l => l.type === "text" && selectedTextsToRemove.includes(l.id)
+      // Get selected component layers to remove and inpaint.
+      const componentLayers = selectedFile.layers.filter(
+        l => isRemovableLayer(l) && removalIds.includes(l.id)
       );
 
-      if (textLayers.length === 0) {
-        throw new Error("No valid text layers selected");
+      if (componentLayers.length === 0) {
+        throw new Error("No valid removable components selected");
       }
 
-      console.log(`Creating mask for ${textLayers.length} text layers at full resolution...`);
-      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, textLayers);
+      console.log(`Creating mask for ${componentLayers.length} selected components at full resolution...`);
+      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, componentLayers);
       
       console.log("Dilating mask...");
       const dilatedMask = dilateMask(maskCanvas, 3);
@@ -1571,7 +1585,7 @@ export default function App() {
       // Convert inpainted canvas to data URL
       const inpaintedUrl = inpaintedCanvas.toDataURL("image/png", 1.0);
       
-      // Update file with new inpainted URL and remove text layers
+      // Update file with new inpainted URL and remove component layers
       pushSnapshot();
       clearRedoStack();
       setFiles((prev: ManagedFile[]) =>
@@ -1581,20 +1595,21 @@ export default function App() {
                 ...f,
                 inpaintedUrl: inpaintedUrl,
                 layers: f.layers.filter(
-                  (l: Layer) => !(l.type === "text" && selectedTextsToRemove.includes(l.id))
+                  (l: Layer) => !(isRemovableLayer(l) && removalIds.includes(l.id))
                 ),
               }
             : f
         )
       );
 
-      setSelectedTextsToRemove([]);
+      if (selectedLayer && removalIds.includes(selectedLayer.id)) setSelectedLayerId(null);
+      setSelectedComponentsToRemove([]);
       setIsRemovingText(false);
-      console.log("Text removal completed successfully");
+      console.log("Component removal completed successfully");
     } catch (error) {
-      console.error("Text removal error:", error);
+      console.error("Component removal error:", error);
       const errorMessage = error instanceof Error ? error.message : String(error);
-      alert(`Failed to remove text: ${errorMessage}`);
+      alert(`Failed to remove selected component: ${errorMessage}`);
     } finally {
       setIsInpainting(false);
     }
@@ -1792,17 +1807,20 @@ export default function App() {
               </button>
               <button
                 type="button"
-                title="Remove text"
+                title="Remove selected component"
                 onClick={() => {
                   const nextIsRemoving = !isRemovingText;
                   setIsRemovingText(nextIsRemoving);
-                  setSelectedTextsToRemove([]);
                   if (nextIsRemoving) {
+                    const nextDrawingLayer = drawingLayer || (selectedLayer && isRemovableLayer(selectedLayer)
+                      ? selectedLayer.type as "face" | "text" | "signature" | "code"
+                      : "text");
+                    setSelectedComponentsToRemove(selectedLayer && isRemovableLayer(selectedLayer) ? [selectedLayer.id] : []);
                     setEditMode("add");
-                    setDrawingLayer("text");
-                    setSelectedLayerId(null);
+                    setDrawingLayer(nextDrawingLayer);
                     setSelectedBaseImage(false);
                   } else {
+                    setSelectedComponentsToRemove([]);
                     setEditMode(null);
                     setDrawingLayer(null);
                   }
@@ -2785,23 +2803,23 @@ export default function App() {
             </div>
           )}
 
-          {/* Text Removal Section */}
+          {/* Component Removal Section */}
           {isRemovingText && selectedFile && (
             <div className="p-4 rounded-xl bg-amber-900/20 border border-amber-700/50 space-y-4">
               <h4 className="text-[10px] font-bold text-amber-600 uppercase tracking-[0.2em] flex items-center gap-2">
                 <Wand2 className="w-4 h-4" />
-                Remove Text (Inpainting)
+                Remove Component (Inpainting)
               </h4>
               
               <div className="space-y-3">
-                <p className="text-[9px] text-amber-700">Drag over text on the canvas, or select detected text layers to remove and fill with background:</p>
+                <p className="text-[9px] text-amber-700">Drag over any face, text, signature, or code region, or select detected layers to remove and blend with the background:</p>
                 
                 <div className="space-y-2 max-h-[25vh] overflow-y-auto">
-                  {selectedFile.layers.filter(l => l.type === "text").length === 0 ? (
-                    <p className="text-[8px] text-neutral-600 italic">No text layers yet. Drag a box over the text area on the image.</p>
+                  {selectedFile.layers.filter(isRemovableLayer).length === 0 ? (
+                    <p className="text-[8px] text-neutral-600 italic">No removable layers yet. Drag a box over the component on the image.</p>
                   ) : (
                     selectedFile.layers
-                      .filter(l => l.type === "text")
+                      .filter(isRemovableLayer)
                       .map(layer => (
                         <label 
                           key={layer.id}
@@ -2809,17 +2827,18 @@ export default function App() {
                         >
                           <input 
                             type="checkbox"
-                            checked={selectedTextsToRemove.includes(layer.id)}
+                            checked={selectedComponentsToRemove.includes(layer.id)}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                               if (e.target.checked) {
-                                setSelectedTextsToRemove([...selectedTextsToRemove, layer.id]);
+                                setSelectedComponentsToRemove([...selectedComponentsToRemove, layer.id]);
                               } else {
-                                setSelectedTextsToRemove(selectedTextsToRemove.filter(id => id !== layer.id));
+                                setSelectedComponentsToRemove(selectedComponentsToRemove.filter(id => id !== layer.id));
                               }
                             }}
                             className="w-4 h-4 accent-amber-600"
                           />
                           <span className="text-[9px] font-bold text-neutral-300 flex-1">{layer.name}</span>
+                          <span className="text-[7px] font-bold uppercase tracking-[0.16em] text-amber-600/70">{layer.type}</span>
                         </label>
                       ))
                   )}
@@ -2827,8 +2846,8 @@ export default function App() {
 
                 <div className="flex gap-2 pt-2">
                   <button 
-                    onClick={removeSelectedTexts}
-                    disabled={selectedTextsToRemove.length === 0 || isInpainting}
+                    onClick={removeSelectedComponents}
+                    disabled={(selectedComponentsToRemove.length === 0 && !(selectedLayer && isRemovableLayer(selectedLayer))) || isInpainting}
                     className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-amber-600/20 border-amber-600 text-amber-400 hover:bg-amber-600/30 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isInpainting ? (
@@ -2846,7 +2865,7 @@ export default function App() {
                   <button 
                     onClick={() => {
                       setIsRemovingText(false);
-                      setSelectedTextsToRemove([]);
+                      setSelectedComponentsToRemove([]);
                       setEditMode(null);
                       setDrawingLayer(null);
                     }}
