@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "motion/react";
-import { Eye, EyeOff, LogIn, Lock } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Image as ImageIcon, Loader2 } from "lucide-react";
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -24,10 +24,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     const trimmedUsername = username.trim().toUpperCase();
     const trimmedPassword = password.trim();
 
-    // Simulate a small delay for better UX
     setTimeout(() => {
       if (trimmedUsername === VALID_USERNAME && trimmedPassword === VALID_PASSWORD) {
-        // Store authentication in sessionStorage
         sessionStorage.setItem("isAuthenticated", "true");
         onLoginSuccess();
       } else {
@@ -38,228 +36,122 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }, 500);
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && username && password) {
-      handleLogin(e as any);
+      handleLogin(e as unknown as React.FormEvent);
     }
   };
 
   return (
-    <div className="min-h-screen bg-black overflow-hidden flex items-center justify-center p-4 relative">
-      {/* Animated background grid */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-black to-blue-900/20" />
-      <svg className="absolute inset-0 w-full h-full opacity-10 pointer-events-none">
-        <defs>
-          <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
-            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(0, 255, 255, 0.5)" strokeWidth="0.5"/>
-          </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill="url(#grid)" />
-      </svg>
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#030507] px-4 py-8 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(59,130,246,0.16),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(14,165,233,0.09),transparent_24%),linear-gradient(180deg,#06080d_0%,#030303_100%)]" />
+      <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:64px_64px]" />
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-blue-950/20 to-transparent" />
 
-      {/* Animated orbs */}
       <motion.div
-        className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-purple-500/30 blur-3xl"
-        animate={{
-          y: [0, 30, 0],
-          x: [0, 20, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
-      <motion.div
-        className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-blue-500/30 blur-3xl"
-        animate={{
-          y: [0, -30, 0],
-          x: [0, -20, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
-      />
+        initial={{ opacity: 0, y: 18 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-[380px]"
+      >
+        <div className="mb-5 flex items-center justify-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl border border-blue-400/30 bg-blue-500 shadow-[0_18px_50px_rgba(37,99,235,0.28)]">
+            <ImageIcon className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <p className="text-sm font-bold tracking-tight text-white">Photo Studio</p>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.35em] text-neutral-500">AI Editor</p>
+          </div>
+        </div>
 
-      {/* Main content */}
-      <div className="relative z-10 w-full max-w-sm">
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.6 }}
-          className="relative"
-        >
-          {/* Glowing border effect */}
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/50 via-blue-500/50 to-purple-500/50 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          
-          {/* Glassmorphic card */}
-          <div className="relative backdrop-blur-2xl bg-white/5 border border-white/20 rounded-2xl p-6 shadow-2xl">
-            {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-1 h-1/3 bg-gradient-to-b from-purple-500 to-transparent" />
-            <div className="absolute bottom-0 left-0 w-1/3 h-1 bg-gradient-to-r from-blue-500 to-transparent" />
+        <div className="rounded-[28px] border border-white/10 bg-[#0d1118]/90 p-5 shadow-[0_35px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+          <div className="mb-7">
+            <div className="mb-4 h-px w-16 bg-gradient-to-r from-blue-400 to-transparent" />
+            <h1 className="text-[28px] font-bold tracking-tight text-white">Welcome Back</h1>
+            <p className="mt-1 text-sm text-neutral-500">Sign in to continue editing your studio assets.</p>
+          </div>
 
-            {/* Header */}
-            <div className="text-center mb-8">
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 100 }}
-                className="inline-block p-4 rounded-full mb-4 bg-gradient-to-br from-purple-500/20 to-blue-500/20 border border-purple-500/50 shadow-lg shadow-purple-500/25"
-              >
-                <Lock className="w-8 h-8 text-purple-400" />
-              </motion.div>
-              
-              <motion.h1
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="text-4xl font-black mb-2 bg-gradient-to-r from-white via-purple-200 to-white bg-clip-text text-transparent tracking-tight"
-              >
-                Welcome
-              </motion.h1>
-              
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-                className="text-gray-400 text-sm font-normal tracking-normal"
-              >
-                Sign in to your account
-              </motion.p>
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                Username
+              </label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="BSCIT-05-0250/2021"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07]"
+                disabled={isLoading}
+                autoComplete="username"
+              />
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-5">
-              {/* Username Input */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <label htmlFor="username" className="block text-xs font-semibold text-gray-300 mb-3 tracking-normal">
-                  Username
-                </label>
-                <div className="relative group">
-                  <input
-                    id="username"
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Enter your username"
-                    className="w-full px-4 py-3 bg-white/5 backdrop-blur border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus:bg-white/10 transition-all duration-300 text-white placeholder-gray-500 text-sm"
-                    disabled={isLoading}
-                  />
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-500/0 via-transparent to-blue-500/0 group-focus-within:from-purple-500/10 group-focus-within:to-blue-500/10 pointer-events-none transition-all duration-300" />
-                </div>
-              </motion.div>
-
-              {/* Password Input */}
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 }}
-              >
-                <label htmlFor="password" className="block text-xs font-semibold text-gray-300 mb-3 tracking-normal">
-                  Password
-                </label>
-                <div className="relative group">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Enter your password"
-                    className="w-full px-4 py-3 bg-white/5 backdrop-blur border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus:bg-white/10 transition-all duration-300 text-white placeholder-gray-500 text-sm pr-12"
-                    disabled={isLoading}
-                  />
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500/0 via-transparent to-purple-500/0 group-focus-within:from-blue-500/10 group-focus-within:to-purple-500/10 pointer-events-none transition-all duration-300" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-400/60 hover:text-blue-400 transition-colors duration-300"
-                    disabled={isLoading}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-
-              {/* Error Message */}
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg backdrop-blur"
+            <div>
+              <label htmlFor="password" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Enter password"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07]"
+                  disabled={isLoading}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl border border-white/10 bg-black/30 p-0 text-neutral-400 transition hover:border-white/20 hover:bg-white/10 hover:text-white"
+                  disabled={isLoading}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  <p className="text-xs text-red-400 font-mono tracking-wide">
-                    ✗ {error}
-                  </p>
-                </motion.div>
-              )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
 
-              {/* Login Button */}
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                type="submit"
-                disabled={isLoading || !username || !password}
-                className="w-full mt-8 relative group overflow-hidden"
+                className="rounded-2xl border border-red-500/25 bg-red-500/10 px-4 py-3"
               >
-                {/* Button gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 blur" />
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-purple-500 rounded-lg opacity-0 group-hover:opacity-50 transition-opacity duration-300" />
-                
-                {/* Button content */}
-                <div className="relative bg-black/40 backdrop-blur border border-white/20 group-hover:border-purple-400/50 px-6 py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2">
-                  {isLoading ? (
-                    <>
-                      <motion.div
-                        className="w-4 h-4 border-2 border-purple-400 border-t-blue-400 rounded-full"
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity }}
-                      />
-                      <span className="text-sm font-bold text-purple-400 tracking-widest">INITIALIZING...</span>
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="w-4 h-4" />
-                      <span className="text-sm font-bold text-white group-hover:text-purple-200 transition-colors tracking-widest">
-                        GRANT_ACCESS
-                      </span>
-                    </>
-                  )}
-                </div>
-              </motion.button>
-            </form>
+                <p className="text-xs font-medium text-red-300">{error}</p>
+              </motion.div>
+            )}
 
-            {/* Footer */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="mt-8 text-center"
+            <button
+              type="submit"
+              disabled={isLoading || !username || !password}
+              className="group mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500 px-4 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(37,99,235,0.22)] transition hover:bg-blue-400 disabled:border-white/10 disabled:bg-white/[0.05] disabled:text-neutral-600 disabled:shadow-none"
             >
-              <p className="text-[10px] text-purple-400/40 font-mono tracking-widest">
-                &gt; PHOTO_STUDIO_v2.0 | SECURED_CONNECTION
-              </p>
-              <p className="text-[10px] text-blue-400/40 font-mono tracking-widest mt-1">
-                © 2024 NEURAL_LABS | ALL_RIGHTS_RESERVED
-              </p>
-            </motion.div>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Checking
+                </>
+              ) : (
+                <>
+                  Enter Studio
+                  <ArrowRight className="h-4 w-4 transition group-hover:translate-x-0.5" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-6 flex items-center justify-between border-t border-white/6 pt-4">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-neutral-600">OpenCV Ready</span>
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.7)]" />
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 };
