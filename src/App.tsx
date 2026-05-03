@@ -977,6 +977,15 @@ export default function App() {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
+    if (editMode && drawingLayer) {
+      setSelectedLayerId(null);
+      setSelectedBaseImage(false);
+      setDragStart({ x, y });
+      setCurrentDrag({ x, y });
+      setIsDragging(true);
+      return;
+    }
+
     // Use actual canvas dimensions from ref to ensure accurate coordinate calculations
     const actualWidth = canvasDimensionsRef.current.width || rect.width;
     const actualHeight = canvasDimensionsRef.current.height || rect.height;
@@ -1059,11 +1068,7 @@ export default function App() {
       }
     }
 
-    if (!editMode || !drawingLayer) return;
-
-    setDragStart({ x, y });
-    setCurrentDrag({ x, y });
-    setIsDragging(true);
+    return;
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1955,7 +1960,7 @@ export default function App() {
       </header>
 
       {/* Main UI */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#060606]">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#060606] min-h-0">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
         <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[248px] border-r border-white/6 bg-[#131b2d] shrink-0 max-h-[28vh] lg:max-h-none`}>
           <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between">
@@ -2170,7 +2175,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none min-h-0"}>
           <div className="rounded-[16px] bg-[#121a2b] px-3 py-2.5 border border-white/6">
             <input
               type="range"
@@ -2406,7 +2411,7 @@ export default function App() {
 
           {/* Layer Properties */}
           {selectedLayer && (
-            <div className="space-y-4 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800">
+            <div className="space-y-4 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 max-h-[42vh] overflow-y-auto pr-2">
               <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Layer Properties</h4>
               
               <div className="space-y-3">

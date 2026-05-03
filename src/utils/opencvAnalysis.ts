@@ -17,6 +17,8 @@ declare global {
   }
 }
 
+let faceCascadePromise: Promise<void> | null = null;
+
 function clamp(value: number, min = 0, max = 1) {
   return Math.max(min, Math.min(max, value));
 }
@@ -76,59 +78,59 @@ function createCanvasFromImage(img: HTMLImageElement) {
   return { canvas, ctx };
 }
 
-function detectFaces(cv: any, hsv: any, width: number, height: number) {
-  const lower = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [0, 30, 60, 0]);
-  const upper = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), [25, 180, 255, 255]);
-  const mask = new cv.Mat();
-  const kernel = cv.getStructuringElement(cv.MORPH_ELLIPSE, new cv.Size(11, 11));
-  const contours = new cv.MatVector();
-  const hierarchy = new cv.Mat();
-
-  cv.inRange(hsv, lower, upper, mask);
-  cv.morphologyEx(mask, mask, cv.MORPH_OPEN, kernel);
-  cv.morphologyEx(mask, mask, cv.MORPH_CLOSE, kernel);
-  cv.findContours(mask, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-  const results: Array<{ x: number; y: number; width: number; height: number; confidence: number }> = [];
-  const minArea = width * height * 0.015;
-  const maxArea = width * height * 0.22;
-
-  for (let i = 0; i < contours.size(); i++) {
-    const contour = contours.get(i);
-    const rect = cv.boundingRect(contour);
-    const area = rect.width * rect.height;
-    const ratio = rect.width / Math.max(rect.height, 1);
-
-    if (
-      area >= minArea &&
-      area <= maxArea &&
-      ratio > 0.65 &&
-      ratio < 1.45 &&
-      rect.y > height * 0.08 &&
-      rect.y + rect.height < height * 0.9
-    ) {
-      const normalized = toNormalizedRect(rect, width, height);
-      results.push({
-        ...normalized,
-        confidence: clamp(area / maxArea, 0.35, 0.92),
-      });
-    }
-    contour.delete();
+async function ensureFaceCascade(cv: any) {
+  if (!faceCascadePromise) {
+    faceCascadePromise = (async () => {
+      const cascadeName = "haarcascade_frontalface_default.xml";
+      try {
+        cv.FS_unlink(`/${cascadeName}`);
+      } catch {}
+      const response = await fetch(`/${cascadeName}`);
+      if (!response.ok) {
+        throw new Error("Failed to load face cascade");
+      }
+      const data = new Uint8Array(await response.arrayBuffer());
+      cv.FS_createDataFile("/", cascadeName, data, true, false, false);
+    })();
   }
 
-  lower.delete();
-  upper.delete();
-  mask.delete();
-  kernel.delete();
-  contours.delete();
-  hierarchy.delete();
+  await faceCascadePromise;
+}
 
-  return dedupeRects(results, 0.28);
+async function detectFaces(cv: any, gray: any, width: number, height: number) {
+  await ensureFaceCascade(cv);
+
+  const classifier = new cv.CascadeClassifier();
+  classifier.load("haarcascade_frontalface_default.xml");
+
+  const facesVector = new cv.RectVector();
+  const minFaceSize = new cv.Size(Math.max(30, Math.round(width * 0.08)), Math.max(30, Math.round(height * 0.08)));
+  classifier.detectMultiScale(gray, facesVector, 1.1, 4, 0, minFaceSize);
+
+  const results: Array<{ x: number; y: number; width: number; height: number; confidence: number }> = [];
+
+  for (let i = 0; i < facesVector.size(); i++) {
+    const rect = facesVector.get(i);
+    const normalized = toNormalizedRect(rect, width, height);
+    const area = normalized.width * normalized.height;
+    if (area > 0.01 && area < 0.5) {
+      results.push({
+        ...normalized,
+        confidence: clamp(0.55 + area, 0.55, 0.95),
+      });
+    }
+  }
+
+  classifier.delete();
+  facesVector.delete();
+  minFaceSize.delete();
+
+  return dedupeRects(results, 0.25);
 }
 
 function detectText(cv: any, gray: any, width: number, height: number) {
   const binary = new cv.Mat();
-  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(17, 3));
+  const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(23, 5));
   const morphed = new cv.Mat();
   const contours = new cv.MatVector();
   const hierarchy = new cv.Mat();
@@ -147,11 +149,14 @@ function detectText(cv: any, gray: any, width: number, height: number) {
     const ratio = rect.width / Math.max(rect.height, 1);
 
     if (
-      area > width * height * 0.0012 &&
-      rect.height > 10 &&
-      rect.height < height * 0.15 &&
-      ratio > 1.6 &&
-      rect.width < width * 0.95
+      area > width * height * 0.00035 &&
+      area < width * height * 0.04 &&
+      rect.height > 8 &&
+      rect.height < height * 0.08 &&
+      ratio > 2.2 &&
+      rect.width < width * 0.7 &&
+      rect.y > height * 0.02 &&
+      rect.y < height * 0.82
     ) {
       const normalized = toNormalizedRect(rect, width, height);
       results.push({
@@ -168,7 +173,7 @@ function detectText(cv: any, gray: any, width: number, height: number) {
   contours.delete();
   hierarchy.delete();
 
-  return dedupeRects(results, 0.42).map((rect) => ({
+  return dedupeRects(results, 0.24).map((rect) => ({
     ...rect,
     content: "Detected text",
   }));
@@ -195,10 +200,11 @@ function detectSignatures(cv: any, gray: any, width: number, height: number) {
 
     if (
       inSignatureBand &&
-      area > width * height * 0.0007 &&
-      ratio > 2.4 &&
-      rect.height < height * 0.12 &&
-      rect.width < width * 0.5
+      area > width * height * 0.00015 &&
+      area < width * height * 0.015 &&
+      ratio > 2.8 &&
+      rect.height < height * 0.08 &&
+      rect.width < width * 0.35
     ) {
       results.push(toNormalizedRect(rect, width, height));
     }
@@ -236,19 +242,15 @@ export async function analyzeImageWithOpenCV(file: File): Promise<OpenCVDetectio
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
   const src = cv.matFromImageData(imageData);
-  const hsv = new cv.Mat();
   const gray = new cv.Mat();
-
-  cv.cvtColor(src, hsv, cv.COLOR_RGBA2HSV);
   cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
 
-  const faces = detectFaces(cv, hsv, canvas.width, canvas.height);
+  const faces = await detectFaces(cv, gray, canvas.width, canvas.height);
   const text = detectText(cv, gray.clone(), canvas.width, canvas.height);
   const signatures = detectSignatures(cv, gray.clone(), canvas.width, canvas.height);
   const backgrounds = detectBackground(cv, src);
 
   src.delete();
-  hsv.delete();
   gray.delete();
 
   const components = [
