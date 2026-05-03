@@ -47,6 +47,21 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(59,130,246,0.16),transparent_28%),radial-gradient(circle_at_82%_12%,rgba(14,165,233,0.09),transparent_24%),linear-gradient(180deg,#06080d_0%,#030303_100%)]" />
       <div className="absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:64px_64px]" />
       <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-blue-950/20 to-transparent" />
+      <motion.div
+        className="absolute left-[9%] top-[12%] h-48 w-48 rounded-full bg-blue-500/10 blur-3xl"
+        animate={{ opacity: [0.18, 0.42, 0.18], scale: [0.92, 1.12, 0.92] }}
+        transition={{ duration: 5.5, repeat: Infinity, ease: "easeInOut" }}
+      />
+      <motion.div
+        className="absolute right-[11%] top-[20%] h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl"
+        animate={{ opacity: [0.12, 0.34, 0.12], scale: [1.08, 0.9, 1.08] }}
+        transition={{ duration: 6.8, repeat: Infinity, ease: "easeInOut", delay: 0.8 }}
+      />
+      <motion.div
+        className="absolute bottom-[8%] left-[32%] h-40 w-72 rounded-full bg-blue-600/10 blur-3xl"
+        animate={{ opacity: [0.1, 0.28, 0.1], scale: [0.95, 1.06, 0.95] }}
+        transition={{ duration: 7.2, repeat: Infinity, ease: "easeInOut", delay: 1.4 }}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 18 }}
@@ -64,16 +79,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-white/10 bg-[#0d1118]/90 p-5 shadow-[0_35px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
-          <div className="mb-7">
-            <div className="mb-4 h-px w-16 bg-gradient-to-r from-blue-400 to-transparent" />
+        <div className="rounded-[28px] border border-white/10 bg-[#0d1118]/90 p-7 shadow-[0_35px_120px_rgba(0,0,0,0.55)] backdrop-blur-2xl sm:p-8">
+          <div className="mb-8">
+            <div className="mb-5 h-px w-20 bg-gradient-to-r from-blue-400 to-transparent" />
             <h1 className="text-[28px] font-bold tracking-tight text-white">Welcome Back</h1>
-            <p className="mt-1 text-sm text-neutral-500">Sign in to continue editing your studio assets.</p>
+            <p className="mt-2 text-sm text-neutral-500">Sign in to continue editing your studio assets.</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label htmlFor="username" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+              <label htmlFor="username" className="mb-2.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
                 Username
               </label>
               <input
@@ -83,14 +98,14 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 onChange={(e) => setUsername(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="BSCIT-05-0250/2021"
-                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07]"
+                className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07] sm:px-5"
                 disabled={isLoading}
                 autoComplete="username"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
+              <label htmlFor="password" className="mb-2.5 block text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500">
                 Password
               </label>
               <div className="relative">
@@ -101,7 +116,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Enter password"
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07]"
+                  className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 pr-12 text-sm text-white placeholder:text-neutral-700 transition focus:border-blue-400/60 focus:bg-white/[0.07] sm:px-5"
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
@@ -130,7 +145,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={isLoading || !username || !password}
-              className="group mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500 px-4 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(37,99,235,0.22)] transition hover:bg-blue-400 disabled:border-white/10 disabled:bg-white/[0.05] disabled:text-neutral-600 disabled:shadow-none"
+              className="group mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-blue-400/30 bg-blue-500 px-4 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(37,99,235,0.22)] transition hover:bg-blue-400 disabled:border-white/10 disabled:bg-white/[0.05] disabled:text-neutral-600 disabled:shadow-none"
             >
               {isLoading ? (
                 <>
@@ -146,7 +161,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between border-t border-white/6 pt-4">
+          <div className="mt-7 flex items-center justify-between border-t border-white/6 pt-5">
             <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-neutral-600">OpenCV Ready</span>
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.7)]" />
           </div>
