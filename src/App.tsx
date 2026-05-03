@@ -1509,109 +1509,138 @@ export default function App() {
       ) : (
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-neutral-800/30 bg-[var(--bg)] z-50 shrink-0">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-2 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-2xl bg-slate-950 border border-neutral-700 flex items-center justify-center">
+      <header className="border-b border-white/6 bg-[#0a0a0a]/95 backdrop-blur-md z-50 shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 border border-blue-300/20 flex items-center justify-center shadow-[0_10px_24px_rgba(37,99,235,0.35)]">
               <ImageIcon className="w-4 h-4 text-white" />
             </div>
-            <div className="hidden sm:block">
-              <span className="font-semibold text-sm tracking-tight block leading-none">Photo Studio</span>
-              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.3em] font-mono">AI editor</span>
+            <div className="min-w-0">
+              <span className="font-semibold text-[13px] tracking-tight block leading-none text-white">Photo Studio</span>
+              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.38em] font-mono">AI-powered editor v1.0</span>
+            </div>
+            <div className="hidden md:block h-8 w-px bg-white/8" />
+            <div className="hidden md:inline-flex items-center gap-2 text-[8px] uppercase tracking-[0.24em] text-neutral-500">
+              <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? "bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]" : "bg-amber-400"}`}></span>
+              <span>{openCVLoaded ? "OpenCV Ready" : "Loading"}</span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700/50 bg-[var(--surface-strong)] px-2 py-1 text-[8px] uppercase tracking-[0.3em] text-neutral-400">
-              <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? 'bg-emerald-400' : 'bg-amber-400'}`}></span>
-              <span>{openCVLoaded ? 'OpenCV Ready' : 'Loading...'}</span>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-              className="grid place-items-center w-9 h-9 rounded-md border border-neutral-700/40 bg-[var(--bg-secondary)] text-neutral-200 transition hover:bg-[var(--surface-strong)]"
-              title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
-            >
-              {viewMode === "editor" ? <Eye className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
-              <span className="sr-only">{viewMode === "editor" ? "Preview" : "Editor"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="grid place-items-center w-9 h-9 rounded-md border border-neutral-700/40 bg-[var(--bg-secondary)] text-neutral-200 transition hover:bg-[var(--surface-strong)]"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              <span className="sr-only">{theme === "dark" ? "Light" : "Dark"}</span>
-            </button>
-
-            <div className="flex items-center gap-0.5 bg-[var(--bg-secondary)] rounded-full p-0.5 border border-neutral-800/40">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <div className="inline-flex items-center gap-1 rounded-xl border border-white/8 bg-[#101010] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
               <button
+                type="button"
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
-                className={`p-0.5 rounded-full transition ${!editMode ? "bg-neutral-700 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${!editMode ? "border-white/5 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
-                <MousePointer2 className="w-3 h-3" />
+                <MousePointer2 className="w-3.5 h-3.5" />
               </button>
               <button
-                title="Face region"
-                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "face" ? "bg-blue-600 text-white" : "text-neutral-400 hover:text-white"}`}
-              >
-                <User className="w-3 h-3" />
-              </button>
-              <button
+                type="button"
                 title="Text region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "text" ? "bg-red-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "text" ? "border-red-500/40 bg-red-600 text-white shadow-[0_8px_24px_rgba(220,38,38,0.4)]" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
-                <FileText className="w-3 h-3" />
+                <FileText className="w-3.5 h-3.5" />
               </button>
               <button
-                title="Signature region"
+                type="button"
+                title="Erase component"
                 onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "signature" ? "bg-purple-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "signature" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
-                <Eraser className="w-3 h-3" />
+                <Eraser className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 title="Code region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`p-0.5 rounded-full transition ${editMode === "add" && drawingLayer === "code" ? "bg-green-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "code" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
-                <Code className="w-3 h-3" />
+                <Code className="w-3.5 h-3.5" />
+              </button>
+              <div className="mx-1 h-5 w-px bg-white/8" />
+              <button
+                type="button"
+                title="Face region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "face" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+              >
+                <User className="w-3.5 h-3.5" />
               </button>
               <button
+                type="button"
                 title="Remove text"
                 onClick={() => setIsRemovingText(!isRemovingText)}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`p-0.5 rounded-full transition disabled:opacity-50 ${isRemovingText ? "bg-amber-600 text-white" : "text-neutral-400 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 disabled:opacity-40 ${isRemovingText ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
-                <Wand2 className="w-3 h-3" />
+                <Wand2 className="w-3.5 h-3.5" />
               </button>
             </div>
 
+            <div className="hidden lg:flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
+                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
+                title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
+              >
+                {viewMode === "editor" ? <Eye className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <button
+              type="button"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              Undo
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+            >
+              <ArrowRight className="w-3.5 h-3.5" />
+              Redo
+            </button>
+
+            <button
+              type="button"
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="p-1 rounded-full bg-[var(--surface-strong)] text-neutral-200 border border-neutral-700/30 transition hover:bg-[var(--surface-hover)]"
+              className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white disabled:opacity-40"
             >
-              <Upload className="w-3 h-3" />
+              <Upload className="w-4 h-4" />
             </button>
 
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="p-1 rounded-full bg-[var(--surface-strong)] text-neutral-200 border border-neutral-700/30 transition hover:bg-[var(--surface-hover)]"
+                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
                 title="More actions"
               >
-                <MoreHorizontal className="w-3 h-3" />
+                <MoreHorizontal className="w-4 h-4" />
               </button>
               {showHeaderMenu && (
-                <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-[var(--bg-secondary)] border border-neutral-800/30 p-2 z-50">
+                <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-[#101010] border border-white/8 p-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
@@ -1715,34 +1744,62 @@ export default function App() {
             </div>
 
             <button
+              type="button"
+              onClick={() => exportAsset("png")}
+              disabled={!selectedFile || isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              PNG
+            </button>
+            <button
+              type="button"
+              onClick={() => exportAsset("jpg")}
+              disabled={!selectedFile || isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+            >
+              <ImageIcon className="w-3.5 h-3.5" />
+              JPG
+            </button>
+            <button
+              type="button"
+              onClick={() => exportAsset("psd")}
+              disabled={!selectedFile || isExporting}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-400/20 bg-blue-600 text-[10px] font-bold uppercase tracking-[0.12em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
+            >
+              <Download className="w-3.5 h-3.5" />
+              PSD
+            </button>
+            <button
               onClick={() => {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="grid place-items-center w-9 h-9 rounded-md border border-red-500/20 bg-[var(--bg-secondary)] text-red-300 hover:bg-red-600/10 hover:text-red-100 transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 bg-[#1a0909] text-[10px] font-bold uppercase tracking-[0.12em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
+              Logout
             </button>
           </div>
         </div>
       </header>
 
       {/* Main UI */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#060606]">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-52 border-r border-neutral-800/30 bg-[var(--bg-secondary)] shrink-0 max-h-[30vh] lg:max-h-none`}>
-          <div className="px-3 py-3 border-b border-neutral-800/30 flex items-center justify-between">
-            <span className="text-[8px] uppercase tracking-[0.3em] text-neutral-400 font-semibold">Library</span>
-            <span className="text-[8px] text-neutral-400 border border-neutral-700 rounded px-2 py-0.5">{files.length}/4</span>
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[286px] border-r border-white/6 bg-[#0b0b0b] shrink-0 max-h-[30vh] lg:max-h-none`}>
+          <div className="px-4 py-4 border-b border-white/6 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-medium">Photo Library</span>
+            <span className="text-[9px] text-neutral-400 border border-white/8 rounded-md px-2 py-0.5 bg-[#151515]">{files.length}/4</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-2 space-y-2">
+          <div className="flex-1 overflow-y-auto p-3 space-y-3">
             {files.map(file => (
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[4/3] min-h-[112px] rounded-2xl overflow-hidden cursor-pointer border transition-all ${selectedFileId === file.id ? "border-blue-500 ring-1 ring-blue-500/20" : "border-neutral-700 hover:border-neutral-600"}`}
+                className={`group relative aspect-[4/3] min-h-[152px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101010] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/8 hover:border-white/18"}`}
               >
                 <img
                   src={file.originalUrl}
@@ -1781,12 +1838,12 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[4/3] min-h-[112px] rounded-2xl border border-dashed border-neutral-700/60 bg-neutral-950/40 flex flex-col items-center justify-center gap-1 text-neutral-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.25em]"
+                className="w-full aspect-[4/3] min-h-[152px] rounded-2xl border border-dashed border-white/10 bg-[#0f0f0f] flex flex-col items-center justify-center gap-3 text-neutral-500 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.28em]"
               >
-                <div className="p-2 rounded-2xl bg-neutral-900">
-                  <Plus className="w-3 h-3" />
+                <div className="p-4 rounded-3xl bg-[#171717] border border-white/5">
+                  <Plus className="w-5 h-5" />
                 </div>
-                <span className="text-[8px] font-semibold">Upload</span>
+                <span className="text-[9px] font-semibold">Upload</span>
               </button>
             )}
           </div>
@@ -1795,13 +1852,13 @@ export default function App() {
         </div>
 
         {/* Center: Canvas */}
-        <div className="flex-1 bg-[var(--bg)] relative overflow-hidden flex items-center justify-center p-3 lg:p-4">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_#111_0%,_transparent_70%)] pointer-events-none" />
+        <div className="flex-1 bg-[#040404] relative overflow-hidden flex items-center justify-center p-4 lg:p-8">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.03)_0%,_transparent_60%)] pointer-events-none" />
           
           {selectedFile ? (
             <div 
               ref={stageRef}
-              className="relative rounded-3xl overflow-hidden bg-[#080a12] border border-neutral-700/20 shadow-[0_12px_26px_-18px_rgba(0,0,0,0.45)] w-full max-w-2xl"
+              className="relative rounded-[28px] overflow-hidden bg-black border border-white/6 shadow-[0_30px_100px_rgba(0,0,0,0.65)] w-full max-w-[820px]"
               style={{ transform: `translate(${canvasPan.x}px, ${canvasPan.y}px)`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }}
             >
               <canvas 
@@ -1892,14 +1949,14 @@ export default function App() {
               </AnimatePresence>
 
               <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="px-2 py-0.5 bg-black/55 border border-neutral-800/30 rounded-full flex items-center gap-2">
+                <div className="px-3 py-1 bg-black/70 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em]">Live</span>
+                  <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em]">Live Editor</span>
                 </div>
                 {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
                   <button
                     onClick={() => setCanvasPan({ x: 0, y: 0 })}
-                    className="px-2 py-0.5 bg-black/55 border border-neutral-700/50 hover:border-neutral-600 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200"
+                    className="px-3 py-1 bg-black/70 border border-white/8 hover:border-white/14 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200"
                     title="Reset pan to center"
                   >
                     Reset View
@@ -1924,11 +1981,11 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-52 border-t lg:border-t-0 lg:border-l border-neutral-800/30 bg-[var(--bg-secondary)] p-2 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[308px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#0b0b0b] p-4 space-y-4 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
           {/* Adjustments */}
           {selectedFile && (
-            <div className="space-y-2">
-              <h4 className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.3em]">Adjustments</h4>
+            <div className="space-y-3 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-4">
+              <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.35em]">Adjustments</h4>
               
               <div className="space-y-2 lg:space-y-3">
                 <div>
@@ -1943,7 +2000,7 @@ export default function App() {
                         ? { ...f, adjustments: { ...f.adjustments, brightness: Number(e.target.value) } }
                         : f
                     ))}
-                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    className="w-full h-1.5 bg-neutral-800 rounded-full accent-blue-500"
                   />
                 </div>
                 <div>
@@ -1958,7 +2015,7 @@ export default function App() {
                         ? { ...f, adjustments: { ...f.adjustments, contrast: Number(e.target.value) } }
                         : f
                     ))}
-                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    className="w-full h-1.5 bg-neutral-800 rounded-full accent-blue-500"
                   />
                 </div>
                 <div>
@@ -1973,7 +2030,7 @@ export default function App() {
                         ? { ...f, adjustments: { ...f.adjustments, saturation: Number(e.target.value) } }
                         : f
                     ))}
-                    className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                    className="w-full h-1.5 bg-neutral-800 rounded-full accent-blue-500"
                   />
                 </div>
               </div>
@@ -1982,7 +2039,7 @@ export default function App() {
 
           {/* Base Image Controls */}
           {selectedBaseImage && selectedFile && !selectedLayer && (
-            <div className="space-y-3 p-3 rounded-2xl bg-neutral-900/25 border border-neutral-800/40">
+            <div className="space-y-3 p-4 rounded-[22px] bg-[#0d0d0d] border border-white/6">
               <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.22em]">Base Image Edit</h4>
               <div className="space-y-2.5">
                 <div>
@@ -2062,7 +2119,7 @@ export default function App() {
                       ? { ...f, crop: { x: 0, y: 0, width: 1, height: 1 } }
                       : f
                   ))}
-                  className="w-full py-2 rounded-xl bg-blue-600/15 border border-blue-500 text-[10px] font-bold uppercase text-blue-200 hover:bg-blue-600/25"
+                  className="w-full py-2 rounded-xl bg-blue-600/15 border border-blue-500/40 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-200 hover:bg-blue-600/25"
                 >
                   Reset Base Crop
                 </button>
@@ -2072,16 +2129,16 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-3">
-            <h4 className="text-[10px] font-semibold text-neutral-200 flex items-center justify-between">
+            <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.35em] flex items-center justify-between">
               <span>Detected Layers</span>
-              <span className="text-[8px] text-neutral-500 font-mono italic">#{selectedFile?.layers.length || 0}</span>
+              <span className="text-[9px] text-neutral-600 font-mono">#{selectedFile?.layers.length || 0}</span>
             </h4>
-            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2">
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-3">
               {selectedFile?.layers.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-dashed border-neutral-700/50 flex flex-col items-center justify-center text-center">
-                  <Layers className="w-6 h-6 text-neutral-700 mb-3" />
-                  <p className="text-[9px] text-neutral-600 font-bold uppercase tracking-tight">No layers detected</p>
-                  <p className="text-[8px] text-neutral-700 mt-1">Draw areas or upload a new photo</p>
+                <div className="p-8 rounded-2xl bg-[#111111] border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
+                  <Layers className="w-7 h-7 text-neutral-700 mb-4" />
+                  <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-[0.18em]">No Layers Detected</p>
+                  <p className="text-[8px] text-neutral-600 mt-2">Draw areas or upload a new photo</p>
                 </div>
               ) : (
                 selectedFile?.layers.map((layer: Layer) => (
@@ -2440,12 +2497,12 @@ export default function App() {
 
           {/* Image Editing Status */}
           {selectedFile && selectedFile.inpaintedUrl && (
-            <div className="p-4 rounded-xl bg-green-900/20 border border-green-700/50 space-y-3">
-              <h4 className="text-[10px] font-bold text-green-600 uppercase tracking-[0.2em] flex items-center gap-2">
+            <div className="p-4 rounded-[22px] bg-[#07150b] border border-emerald-500/30 space-y-3 shadow-[inset_0_1px_0_rgba(74,222,128,0.03)]">
+              <h4 className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.28em] flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Edit History
               </h4>
-              <p className="text-[8px] text-green-700">Image has been edited with inpainting</p>
+              <p className="text-[8px] text-emerald-700">Image has been edited with inpainting</p>
               <button 
                 onClick={() => {
                   pushSnapshot();
@@ -2459,7 +2516,7 @@ export default function App() {
                   );
                   console.log("Reset to original image");
                 }}
-                className="w-full py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:text-neutral-300 hover:border-neutral-600"
+                className="w-full py-2 px-3 rounded-xl text-[9px] font-bold uppercase tracking-[0.16em] transition-all border bg-[#151515] border-white/8 text-neutral-300 hover:text-white hover:border-white/12"
               >
                 <RotateCcw className="w-3 h-3 inline mr-1" />
                 Reset to Original
@@ -2540,21 +2597,21 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-3 rounded-md bg-[var(--bg-secondary)] border border-neutral-700/40 space-y-3 overflow-visible">
+          <div className="p-4 rounded-[22px] bg-[#0d0d0d] border border-white/6 space-y-4 overflow-visible">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <CreditCard className="w-4 h-4 text-neutral-200" />
-                <span className="text-[9px] font-semibold text-neutral-200">DL Number Generator</span>
+                <CreditCard className="w-4 h-4 text-neutral-500" />
+                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-neutral-500">DL Number Generator</span>
               </div>
             </div>
             
             <div className="space-y-2">
               <div>
-                <label className="text-[8px] font-medium text-neutral-400 mb-1 block">State</label>
+                <label className="text-[8px] font-medium text-neutral-500 mb-2 block uppercase tracking-[0.2em]">State</label>
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="appearance-none relative z-30 w-full px-2 py-1.5 rounded-md bg-[var(--bg-secondary)] border border-neutral-700/40 text-[9px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
+                  className="appearance-none relative z-30 w-full px-3 py-3 rounded-xl bg-[#151515] border border-white/8 text-[10px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
@@ -2566,7 +2623,7 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full inline-flex items-center justify-center gap-2 py-1.5 rounded-md text-[9px] font-semibold uppercase transition-all border border-blue-500/20 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
+                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-semibold uppercase tracking-[0.18em] transition-all border border-blue-500/40 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
               >
                 <RefreshCw className="w-3 h-3" />
                 Generate
