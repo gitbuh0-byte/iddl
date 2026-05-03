@@ -2239,24 +2239,6 @@ export default function App() {
           className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 pr-2 pb-16 space-y-3 shrink-0 overflow-y-scroll overscroll-contain touch-pan-y max-h-[36vh] lg:max-h-none min-h-0 h-full"}
           style={{ scrollbarGutter: "stable" }}
         >
-          <div className="rounded-[16px] bg-[#121a2b] px-3 py-2.5 border border-white/6">
-            <input
-              type="range"
-              min="-10"
-              max="10"
-              value={selectedFile?.adjustments.brightness ?? 0}
-              onChange={(e) => {
-                if (!selectedFile) return;
-                updateFilesWithHistory(prev => prev.map(f =>
-                  f.id === selectedFileId
-                    ? { ...f, adjustments: { ...f.adjustments, brightness: Number(e.target.value) } }
-                    : f
-                ));
-              }}
-              className="w-full h-1.5 bg-neutral-200/80 rounded-full accent-blue-500"
-            />
-          </div>
-
           <div className="flex items-center justify-between px-1">
             <span className="text-[9px] font-semibold text-white tracking-tight">Detected Layers</span>
             <span className="text-[8px] text-neutral-500 font-mono">#{selectedFile?.layers.length || 0}</span>
