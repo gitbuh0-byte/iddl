@@ -164,6 +164,18 @@ export default function App() {
     updateLayer(selectedLayer.id, updates);
   };
 
+  const activeToolClass = (isActive: boolean, tone: "blue" | "red" | "purple" | "green" | "amber" = "blue") => {
+    if (!isActive) return "border-transparent bg-transparent text-neutral-500 hover:text-white";
+    const glow = {
+      blue: "border-blue-400/70 bg-blue-500/20 text-blue-100 shadow-[0_0_0_1px_rgba(96,165,250,0.45),0_0_22px_rgba(59,130,246,0.55)]",
+      red: "border-red-400/70 bg-red-500/20 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.45),0_0_22px_rgba(239,68,68,0.55)]",
+      purple: "border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_0_1px_rgba(167,139,250,0.45),0_0_22px_rgba(139,92,246,0.55)]",
+      green: "border-emerald-400/70 bg-emerald-500/20 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45),0_0_22px_rgba(16,185,129,0.55)]",
+      amber: "border-amber-400/70 bg-amber-500/20 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_0_22px_rgba(245,158,11,0.55)]",
+    };
+    return glow[tone];
+  };
+
   const clampCanvasPan = (pan: { x: number; y: number }, zoom = canvasZoom) => {
     const stage = stageRef.current;
     const parent = stage?.parentElement;
@@ -831,31 +843,6 @@ export default function App() {
             ctx.strokeText(text, textX, textY);
             ctx.fillText(text, textX, textY);
             ctx.restore();
-
-            if (selectedLayer?.id === layer.id) {
-              ctx.strokeStyle = "rgba(0, 217, 255, 0.8)";
-              ctx.lineWidth = 2;
-              ctx.setLineDash([5, 5]);
-              ctx.strokeRect(x, y, w, h);
-              ctx.setLineDash([]);
-              
-              // Draw resize handles
-              const handleSize = 5;
-              const handles = [
-                { x: x - handleSize, y: y - handleSize }, // nw
-                { x: x + w - handleSize, y: y - handleSize }, // ne
-                { x: x - handleSize, y: y + h - handleSize }, // sw
-                { x: x + w - handleSize, y: y + h - handleSize }, // se
-              ];
-              
-              ctx.fillStyle = "rgba(0, 217, 255, 0.9)";
-              ctx.strokeStyle = "rgba(255,255,255,0.18)";
-              ctx.lineWidth = 1;
-              handles.forEach(handle => {
-                ctx.fillRect(handle.x, handle.y, handleSize * 2, handleSize * 2);
-                ctx.strokeRect(handle.x, handle.y, handleSize * 2, handleSize * 2);
-              });
-            }
 
             return;
           }
@@ -1786,7 +1773,7 @@ export default function App() {
                 type="button"
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${!editMode ? "border-[#31415c] bg-[#182233] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(!editMode, "blue")}`}
               >
                 <MousePointer2 className="w-3.5 h-3.5" />
               </button>
@@ -1794,7 +1781,7 @@ export default function App() {
                 type="button"
                 title="Face region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "face" ? "border-[#31415c] bg-[#182233] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "face", "blue")}`}
               >
                 <User className="w-3.5 h-3.5" />
               </button>
@@ -1802,7 +1789,7 @@ export default function App() {
                 type="button"
                 title="Text region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "text" ? "border-red-500/40 bg-red-600 text-white shadow-[0_8px_24px_rgba(220,38,38,0.4)]" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "text", "red")}`}
               >
                 <FileText className="w-3.5 h-3.5" />
               </button>
@@ -1810,7 +1797,7 @@ export default function App() {
                 type="button"
                 title="Erase component"
                 onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "signature" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "signature", "purple")}`}
               >
                 <Eraser className="w-3.5 h-3.5" />
               </button>
@@ -1818,7 +1805,7 @@ export default function App() {
                 type="button"
                 title="Code region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "code" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "code", "green")}`}
               >
                 <Code className="w-3.5 h-3.5" />
               </button>
@@ -1843,7 +1830,7 @@ export default function App() {
                   }
                 }}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 disabled:opacity-40 ${isRemovingText ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all disabled:opacity-40 ${activeToolClass(isRemovingText, "amber")}`}
               >
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
