@@ -873,6 +873,17 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    setCanvasPan({ x: 0, y: 0 });
+    setIsPanning(false);
+    setPanStart(null);
+    setSelectedLayerDrag(null);
+    setLayerResizeInfo(null);
+    setIsDragging(false);
+    setDragStart(null);
+    setCurrentDrag(null);
+  }, [selectedFileId]);
+
+  useEffect(() => {
     const updateLayout = () => {
       if (!canvasRef.current) return;
       const rect = canvasRef.current.getBoundingClientRect();
@@ -912,13 +923,6 @@ export default function App() {
     const actualHeight = canvasDimensionsRef.current.height || rect.height;
 
     const clickedLayer = getTopLayerAtPoint(x * actualWidth, y * actualHeight);
-    
-    // If no layer clicked and not in edit mode, enable panning
-    if (!clickedLayer && !editMode) {
-      setIsPanning(true);
-      setPanStart({ x: e.clientX, y: e.clientY });
-      return;
-    }
     
     if (clickedLayer) {
       setSelectedBaseImage(false);
@@ -1744,7 +1748,7 @@ export default function App() {
                   src={file.originalUrl}
                   draggable={false}
                   className="block w-full h-full object-cover pointer-events-none select-none"
-                  style={{ userSelect: "none", WebkitUserDrag: "none", MozUserSelect: "none", msUserSelect: "none" }}
+                  style={{ userSelect: "none", MozUserSelect: "none", msUserSelect: "none" }}
                 />
                 <div className="absolute inset-0 bg-neutral-950/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                 
