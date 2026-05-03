@@ -75,6 +75,9 @@ export default function App() {
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [currentDrag, setCurrentDrag] = useState<{ x: number, y: number } | null>(null);
   const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
+  const [canvasPan, setCanvasPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedLayerDrag, setSelectedLayerDrag] = useState<{
     layerId: string;
     origin: { x: number; y: number };
@@ -891,6 +894,14 @@ export default function App() {
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Enable panning with middle mouse button or when right-clicking
+    if (e.button === 1 || e.button === 2) { // middle or right mouse button
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
+    
     if (!canvasRef.current || !selectedFile) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
@@ -901,6 +912,14 @@ export default function App() {
     const actualHeight = canvasDimensionsRef.current.height || rect.height;
 
     const clickedLayer = getTopLayerAtPoint(x * actualWidth, y * actualHeight);
+    
+    // If no layer clicked and not in edit mode, enable panning
+    if (!clickedLayer && !editMode) {
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
+    
     if (clickedLayer) {
       setSelectedBaseImage(false);
       if (selectedLayerId !== clickedLayer.id) {
@@ -961,6 +980,22 @@ export default function App() {
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+    
+    // Handle canvas panning
+    if (isPanning && panStart) {
+      e.stopPropagation();
+      const deltaX = e.clientX - panStart.x;
+      const deltaY = e.clientY - panStart.y;
+      
+      setCanvasPan(prev => ({
+        x: prev.x + deltaX,
+        y: prev.y + deltaY
+      }));
+      
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
+    
     if (!isDragging || !canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width;
@@ -1052,6 +1087,12 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
+    if (isPanning) {
+      setIsPanning(false);
+      setPanStart(null);
+      return;
+    }
+    
     if (selectedLayerDrag && !dragMoved) {
       setSelectedLayerDrag(null);
       setIsDragging(false);
@@ -1120,6 +1161,51 @@ export default function App() {
     setIsDragging(false);
     setDragStart(null);
     setCurrentDrag(null);
+  };
+
+  const handleCanvasWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Pan the canvas with wheel events
+    const deltaX = e.deltaX;
+    const deltaY = e.deltaY;
+    setCanvasPan(prev => ({
+      x: prev.x - deltaX,
+      y: prev.y - deltaY
+    }));
+  };
+
+  const handleCanvasPanMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (e.button !== 2 && !editMode && !selectedLayer) return; // Right-click or no layer selected
+    if (e.button === 0 && selectedLayer) return; // Left-click with selected layer - for selection/editing
+    
+    e.preventDefault();
+    e.stopPropagation();
+    setIsPanning(true);
+    setPanStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleCanvasPanMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isPanning || !panStart) return;
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const deltaX = e.clientX - panStart.x;
+    const deltaY = e.clientY - panStart.y;
+    
+    setCanvasPan(prev => ({
+      x: prev.x + deltaX,
+      y: prev.y + deltaY
+    }));
+    
+    setPanStart({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleCanvasPanMouseUp = () => {
+    setIsPanning(false);
+    setPanStart(null);
   };
 
   const deleteLayer = async (layerId: string) => {
@@ -1712,6 +1798,7 @@ export default function App() {
             <div 
               ref={stageRef}
               className="relative rounded-3xl overflow-hidden bg-[#080a12] border border-neutral-700/20 shadow-[0_12px_26px_-18px_rgba(0,0,0,0.45)] w-full max-w-2xl"
+              style={{ transform: `translate(${canvasPan.x}px, ${canvasPan.y}px)`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }}
             >
               <canvas 
                 ref={canvasRef}
@@ -1719,9 +1806,11 @@ export default function App() {
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
+                onWheel={handleCanvasWheel}
+                onContextMenu={(e) => e.preventDefault()}
                 draggable={false}
-                style={{ touchAction: "none" }}
-                className={`w-full block h-auto ${editMode ? "cursor-crosshair" : "cursor-default"}`}
+                style={{ touchAction: "none", cursor: isPanning ? "grabbing" : editMode ? "crosshair" : "grab" }}
+                className="w-full block h-auto"
               />
               {selectedLayer?.type === "image" && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
                 const rect = getLayerDisplayRect(selectedLayer);
@@ -1803,6 +1892,15 @@ export default function App() {
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-[8px] font-semibold text-neutral-400 uppercase tracking-[0.25em]">Live</span>
                 </div>
+                {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
+                  <button
+                    onClick={() => setCanvasPan({ x: 0, y: 0 })}
+                    className="px-2 py-0.5 bg-black/55 border border-neutral-700/50 hover:border-neutral-600 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200"
+                    title="Reset pan to center"
+                  >
+                    Reset View
+                  </button>
+                )}
               </div>
             </div>
           ) : (
