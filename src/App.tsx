@@ -77,6 +77,7 @@ export default function App() {
   const [currentDrag, setCurrentDrag] = useState<{ x: number, y: number } | null>(null);
   const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
   const [canvasPan, setCanvasPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [canvasZoom, setCanvasZoom] = useState(1);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedLayerDrag, setSelectedLayerDrag] = useState<{
@@ -93,6 +94,15 @@ export default function App() {
     anchor: "nw" | "ne" | "se" | "sw";
     start: { x: number; y: number };
     layer: Layer;
+    crop: { x: number; y: number; width: number; height: number };
+  } | null>(null);
+  const [baseImageDrag, setBaseImageDrag] = useState<{
+    origin: { x: number; y: number };
+    crop: { x: number; y: number; width: number; height: number };
+  } | null>(null);
+  const [baseImageResizeInfo, setBaseImageResizeInfo] = useState<{
+    anchor: "nw" | "ne" | "se" | "sw";
+    start: { x: number; y: number };
     crop: { x: number; y: number; width: number; height: number };
   } | null>(null);
 
@@ -194,6 +204,26 @@ export default function App() {
         return anchor;
       }
     }
+    return null;
+  };
+
+  const getBaseCropHandleAtPoint = (x: number, y: number) => {
+    if (!canvasLayout.width || !canvasLayout.height) return null;
+    const handleSize = 14;
+    const corners = {
+      nw: { x: 0, y: 0 },
+      ne: { x: canvasLayout.width, y: 0 },
+      sw: { x: 0, y: canvasLayout.height },
+      se: { x: canvasLayout.width, y: canvasLayout.height },
+    } as const;
+
+    for (const anchor of ["nw", "ne", "sw", "se"] as const) {
+      const point = corners[anchor];
+      if (Math.abs(x - point.x) <= handleSize && Math.abs(y - point.y) <= handleSize) {
+        return anchor;
+      }
+    }
+
     return null;
   };
 
@@ -900,10 +930,13 @@ export default function App() {
 
   useEffect(() => {
     setCanvasPan({ x: 0, y: 0 });
+    setCanvasZoom(1);
     setIsPanning(false);
     setPanStart(null);
     setSelectedLayerDrag(null);
     setLayerResizeInfo(null);
+    setBaseImageDrag(null);
+    setBaseImageResizeInfo(null);
     setIsDragging(false);
     setDragStart(null);
     setCurrentDrag(null);
@@ -999,6 +1032,31 @@ export default function App() {
     if (!clickedLayer) {
       setSelectedLayerId(null);
       setSelectedBaseImage(true);
+
+      if (!editMode) {
+        const handle = getBaseCropHandleAtPoint(x * actualWidth, y * actualHeight);
+        const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+
+        pushSnapshot();
+        clearRedoStack();
+
+        if (handle) {
+          setBaseImageResizeInfo({
+            anchor: handle,
+            start: { x, y },
+            crop: fileCrop,
+          });
+        } else {
+          setBaseImageDrag({
+            origin: { x, y },
+            crop: fileCrop,
+          });
+        }
+
+        setDragMoved(false);
+        setIsDragging(true);
+        return;
+      }
     }
 
     if (!editMode || !drawingLayer) return;
@@ -1075,6 +1133,67 @@ export default function App() {
       return;
     }
 
+    if (baseImageResizeInfo && selectedFile) {
+      const dx = x - baseImageResizeInfo.start.x;
+      const dy = y - baseImageResizeInfo.start.y;
+      const original = baseImageResizeInfo.crop;
+      const updates = { ...original };
+      const minCropSize = 0.1;
+
+      if (baseImageResizeInfo.anchor === "se") {
+        updates.width = Math.max(minCropSize, Math.min(1 - original.x, original.width + dx * original.width));
+        updates.height = Math.max(minCropSize, Math.min(1 - original.y, original.height + dy * original.height));
+      } else if (baseImageResizeInfo.anchor === "sw") {
+        const nextX = Math.max(0, Math.min(original.x + original.width - minCropSize, original.x + dx * original.width));
+        updates.x = nextX;
+        updates.width = Math.max(minCropSize, original.width - (nextX - original.x));
+        updates.height = Math.max(minCropSize, Math.min(1 - original.y, original.height + dy * original.height));
+      } else if (baseImageResizeInfo.anchor === "ne") {
+        const nextY = Math.max(0, Math.min(original.y + original.height - minCropSize, original.y + dy * original.height));
+        updates.y = nextY;
+        updates.height = Math.max(minCropSize, original.height - (nextY - original.y));
+        updates.width = Math.max(minCropSize, Math.min(1 - original.x, original.width + dx * original.width));
+      } else if (baseImageResizeInfo.anchor === "nw") {
+        const nextX = Math.max(0, Math.min(original.x + original.width - minCropSize, original.x + dx * original.width));
+        const nextY = Math.max(0, Math.min(original.y + original.height - minCropSize, original.y + dy * original.height));
+        updates.x = nextX;
+        updates.y = nextY;
+        updates.width = Math.max(minCropSize, original.width - (nextX - original.x));
+        updates.height = Math.max(minCropSize, original.height - (nextY - original.y));
+      }
+
+      setFiles((prev) => prev.map((file) =>
+        file.id === selectedFileId
+          ? { ...file, crop: updates }
+          : file
+      ));
+      return;
+    }
+
+    if (baseImageDrag && selectedFile) {
+      const moveDistancePx = Math.hypot(
+        (x - baseImageDrag.origin.x) * actualWidth,
+        (y - baseImageDrag.origin.y) * actualHeight
+      );
+      if (!dragMoved && moveDistancePx < 6) {
+        return;
+      }
+      if (!dragMoved) {
+        setDragMoved(true);
+      }
+
+      const crop = baseImageDrag.crop;
+      const nextX = Math.max(0, Math.min(1 - crop.width, crop.x + (x - baseImageDrag.origin.x) * crop.width));
+      const nextY = Math.max(0, Math.min(1 - crop.height, crop.y + (y - baseImageDrag.origin.y) * crop.height));
+
+      setFiles((prev) => prev.map((file) =>
+        file.id === selectedFileId
+          ? { ...file, crop: { ...crop, x: nextX, y: nextY } }
+          : file
+      ));
+      return;
+    }
+
     if (selectedLayerDrag && selectedFile) {
       const moveDistancePx = Math.hypot(
         (x - selectedLayerDrag.origin.x) * actualWidth,
@@ -1125,6 +1244,30 @@ export default function App() {
     
     if (selectedLayerDrag && !dragMoved) {
       setSelectedLayerDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
+    if (baseImageDrag && !dragMoved) {
+      setBaseImageDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
+    if (baseImageDrag) {
+      setBaseImageDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
+    if (baseImageResizeInfo) {
+      setBaseImageResizeInfo(null);
       setIsDragging(false);
       setDragStart(null);
       setCurrentDrag(null);
@@ -1196,13 +1339,16 @@ export default function App() {
   const handleCanvasWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    // Pan the canvas with wheel events
-    const deltaX = e.deltaX;
-    const deltaY = e.deltaY;
+
+    if (e.ctrlKey || e.metaKey) {
+      const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
+      setCanvasZoom((prev) => Math.max(0.5, Math.min(3, Number((prev + zoomDelta).toFixed(2)))));
+      return;
+    }
+
     setCanvasPan(prev => ({
-      x: prev.x - deltaX,
-      y: prev.y - deltaY
+      x: prev.x - e.deltaX,
+      y: prev.y - e.deltaY
     }));
   };
 
@@ -1623,23 +1769,23 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-[0_0_auto]">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-[0_0_auto]">
             <button
               type="button"
               onClick={handleUndo}
               disabled={!canUndo}
-              className="inline-flex items-center justify-center gap-2 min-w-[104px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[88px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
+              <ArrowLeft className="w-3 h-3" />
               Undo
             </button>
             <button
               type="button"
               onClick={handleRedo}
               disabled={!canRedo}
-              className="inline-flex items-center justify-center gap-2 min-w-[104px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[88px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
             >
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-3 h-3" />
               Redo
             </button>
 
@@ -1648,19 +1794,19 @@ export default function App() {
               title="Add overlay image"
               onClick={openOverlayImagePicker}
               disabled={!selectedFile}
-              className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white disabled:opacity-40"
+              className="grid place-items-center w-9 h-9 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white disabled:opacity-40"
             >
-              <Upload className="w-4 h-4" />
+              <Upload className="w-3.5 h-3.5" />
             </button>
 
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
+                className="grid place-items-center w-9 h-9 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
                 title="More actions"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-3.5 h-3.5" />
               </button>
               {showHeaderMenu && (
                 <div className="absolute right-0 mt-2 w-52 rounded-2xl bg-[#101010] border border-white/8 p-2 z-50 shadow-[0_20px_50px_rgba(0,0,0,0.45)]">
@@ -1770,27 +1916,27 @@ export default function App() {
               type="button"
               onClick={() => exportAsset("png")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
             >
-              <ImageIcon className="w-3.5 h-3.5" />
+              <ImageIcon className="w-3 h-3" />
               PNG
             </button>
             <button
               type="button"
               onClick={() => exportAsset("jpg")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
             >
-              <ImageIcon className="w-3.5 h-3.5" />
+              <ImageIcon className="w-3 h-3" />
               JPG
             </button>
             <button
               type="button"
               onClick={() => exportAsset("psd")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-blue-400/20 bg-blue-600 text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-blue-400/20 bg-blue-600 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="w-3 h-3" />
               PSD
             </button>
             <button
@@ -1798,10 +1944,10 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="inline-flex items-center justify-center gap-2 min-w-[122px] px-3 py-2 rounded-xl border border-red-500/20 bg-[#1a0909] text-[9px] font-semibold uppercase tracking-[0.1em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
+              className="inline-flex items-center justify-center gap-1.5 min-w-[100px] h-9 px-2.5 rounded-xl border border-red-500/20 bg-[#1a0909] text-[8px] font-semibold uppercase tracking-[0.08em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
               title="Logout"
             >
-              <LogOut className="w-3.5 h-3.5" />
+              <LogOut className="w-3 h-3" />
               Logout
             </button>
           </div>
@@ -1811,18 +1957,18 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#060606]">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[280px] border-r border-white/6 bg-[#131b2d] shrink-0 max-h-[30vh] lg:max-h-none`}>
-          <div className="px-4 py-4 border-b border-white/6 flex items-center justify-between">
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[248px] border-r border-white/6 bg-[#131b2d] shrink-0 max-h-[28vh] lg:max-h-none`}>
+          <div className="px-4 py-3 border-b border-white/6 flex items-center justify-between">
             <span className="text-[9px] uppercase tracking-[0.35em] text-neutral-400 font-medium">Library</span>
             <span className="text-[9px] text-neutral-300 border border-white/8 rounded-md px-2 py-0.5 bg-[#151d2f]">{files.length}/4</span>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-3 space-y-3">
+          <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
             {files.map(file => (
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[4/3] min-h-[152px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101722] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/10 hover:border-white/20"}`}
+                className={`group relative aspect-[4/3] min-h-[128px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101722] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/10 hover:border-white/20"}`}
               >
                 <img
                   src={file.originalUrl}
@@ -1861,10 +2007,10 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[4/3] min-h-[152px] rounded-2xl border border-dashed border-white/10 bg-[#101722] flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.28em]"
+                className="w-full aspect-[4/3] min-h-[128px] rounded-2xl border border-dashed border-white/10 bg-[#101722] flex flex-col items-center justify-center gap-2.5 text-neutral-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.28em]"
               >
-                <div className="p-4 rounded-3xl bg-[#1a2134] border border-white/5">
-                  <Plus className="w-5 h-5" />
+                <div className="p-3 rounded-3xl bg-[#1a2134] border border-white/5">
+                  <Plus className="w-4 h-4" />
                 </div>
                 <span className="text-[8px] font-semibold">Upload</span>
               </button>
@@ -1882,7 +2028,7 @@ export default function App() {
             <div 
               ref={stageRef}
               className="relative rounded-[28px] overflow-hidden bg-black border border-white/6 shadow-[0_30px_100px_rgba(0,0,0,0.65)] w-full max-w-[820px]"
-              style={{ transform: `translate(${canvasPan.x}px, ${canvasPan.y}px)`, transition: isPanning ? 'none' : 'transform 0.1s ease-out' }}
+              style={{ transform: `translate(${canvasPan.x}px, ${canvasPan.y}px) scale(${canvasZoom})`, transformOrigin: "center center", transition: isPanning ? 'none' : 'transform 0.1s ease-out' }}
             >
               <canvas 
                 ref={canvasRef}
@@ -1922,6 +2068,23 @@ export default function App() {
                   </div>
                 );
               })()}
+              {selectedBaseImage && !selectedLayer && canvasLayout.width > 0 && canvasLayout.height > 0 && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 border border-dashed border-white/70 rounded-[28px]" />
+                  {[
+                    { key: "nw", left: 0, top: 0 },
+                    { key: "ne", left: canvasLayout.width, top: 0 },
+                    { key: "sw", left: 0, top: canvasLayout.height },
+                    { key: "se", left: canvasLayout.width, top: canvasLayout.height },
+                  ].map((handle) => (
+                    <div
+                      key={handle.key}
+                      className="absolute w-2.5 h-2.5 rounded-full bg-white border border-blue-300/80 shadow-lg"
+                      style={{ left: handle.left, top: handle.top, transform: "translate(-50%, -50%)" }}
+                    />
+                  ))}
+                </div>
+              )}
               
               <AnimatePresence>
                 {selectedFile.isAnalyzing && (
@@ -1976,6 +2139,9 @@ export default function App() {
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em]">Live Editor</span>
                 </div>
+                <div className="px-3 py-1 bg-black/70 border border-white/8 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+                  Zoom {(canvasZoom * 100).toFixed(0)}%
+                </div>
                 {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
                   <button
                     onClick={() => setCanvasPan({ x: 0, y: 0 })}
@@ -1988,13 +2154,13 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <div className="text-center space-y-6">
-              <div className="w-20 h-20 bg-neutral-900 border border-neutral-800 rounded-3xl flex items-center justify-center mx-auto relative group">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 rounded-3xl flex items-center justify-center mx-auto relative group">
                 <div className="absolute inset-0 bg-blue-500/10 blur-xl opacity-0 group-hover:opacity-100 transition-all rounded-full" />
-                <ImageIcon className="w-8 h-8 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
+                <ImageIcon className="w-6 h-6 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-[14px] font-bold text-white tracking-tight">Upload Your Photo</h3>
+                <h3 className="text-[13px] font-bold text-white tracking-tight">Upload Your Photo</h3>
                 <p className="text-[8px] text-neutral-500 uppercase tracking-[0.18em] font-medium max-w-xs mx-auto leading-relaxed">
                   AI will automatically detect faces, text, signatures, codes, and backgrounds.
                 </p>
@@ -2004,8 +2170,8 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[306px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-4 space-y-4 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
-          <div className="rounded-[18px] bg-[#121a2b] px-4 py-3 border border-white/6">
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+          <div className="rounded-[16px] bg-[#121a2b] px-3 py-2.5 border border-white/6">
             <input
               type="range"
               min="-10"
@@ -2030,7 +2196,7 @@ export default function App() {
 
           {/* Adjustments */}
           {selectedFile && (
-            <div className="space-y-3 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-4">
+            <div className="space-y-2.5 rounded-[20px] border border-white/6 bg-[#0d0d0d] p-3">
               <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.35em]">Adjustments</h4>
               
               <div className="space-y-2 lg:space-y-3">
@@ -2085,7 +2251,7 @@ export default function App() {
 
           {/* Base Image Controls */}
           {selectedBaseImage && selectedFile && !selectedLayer && (
-            <div className="space-y-3 p-4 rounded-[22px] bg-[#0d0d0d] border border-white/6">
+            <div className="space-y-2.5 p-3 rounded-[20px] bg-[#0d0d0d] border border-white/6">
               <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.22em]">Base Image Edit</h4>
               <div className="space-y-2.5">
                 <div>
@@ -2175,7 +2341,7 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-3">
-            <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-3">
+            <div className="space-y-2 max-h-[32vh] overflow-y-auto pr-1 rounded-[20px] border border-white/6 bg-[#0d0d0d] p-2.5">
               {selectedFile?.layers.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-[#111111] border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
                   <Layers className="w-7 h-7 text-neutral-700 mb-4" />
@@ -2539,7 +2705,7 @@ export default function App() {
 
           {/* Image Editing Status */}
           {selectedFile && selectedFile.inpaintedUrl && (
-            <div className="p-4 rounded-[22px] bg-[#07150b] border border-emerald-500/30 space-y-3 shadow-[inset_0_1px_0_rgba(74,222,128,0.03)]">
+            <div className="p-3 rounded-[20px] bg-[#07150b] border border-emerald-500/30 space-y-2.5 shadow-[inset_0_1px_0_rgba(74,222,128,0.03)]">
               <h4 className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.28em] flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4" />
                 Edit History
@@ -2639,7 +2805,7 @@ export default function App() {
           )}
 
           {/* DL Number Generator */}
-          <div className="p-4 rounded-[22px] bg-[#0d0d0d] border border-white/6 space-y-4 overflow-visible">
+          <div className="p-3 rounded-[20px] bg-[#0d0d0d] border border-white/6 space-y-3 overflow-visible">
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-neutral-500" />
@@ -2649,11 +2815,11 @@ export default function App() {
             
             <div className="space-y-2">
               <div>
-                <label className="text-[8px] font-medium text-neutral-500 mb-2 block uppercase tracking-[0.2em]">State</label>
+                <label className="text-[7px] font-medium text-neutral-500 mb-1.5 block uppercase tracking-[0.18em]">State</label>
                 <select 
                   value={selectedDLState}
                   onChange={(e) => setSelectedDLState(e.target.value as StateCode)}
-                  className="appearance-none relative z-30 w-full px-3 py-3 rounded-xl bg-[#151515] border border-white/8 text-[10px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
+                  className="appearance-none relative z-30 w-full h-12 px-3 rounded-xl bg-[#151515] border border-white/8 text-[9px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
                 >
                   {getAllStates().map((state) => (
                     <option key={state.stateCode} value={state.stateCode} className="text-[9px] text-neutral-300">
@@ -2665,9 +2831,9 @@ export default function App() {
 
               <button 
                 onClick={generateDLNumbers}
-                className="w-full inline-flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-semibold uppercase tracking-[0.18em] transition-all border border-blue-500/40 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
+                className="w-full inline-flex items-center justify-center gap-1.5 h-12 rounded-xl text-[8px] font-semibold uppercase tracking-[0.16em] transition-all border border-blue-500/40 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
               >
-                <RefreshCw className="w-3 h-3" />
+                <RefreshCw className="w-2.5 h-2.5" />
                 Generate
               </button>
 
