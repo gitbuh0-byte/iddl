@@ -164,6 +164,31 @@ export default function App() {
     updateLayer(selectedLayer.id, updates);
   };
 
+  const clampCanvasPan = (pan: { x: number; y: number }, zoom = canvasZoom) => {
+    const stage = stageRef.current;
+    const parent = stage?.parentElement;
+    if (!stage || !parent) return pan;
+
+    const parentRect = parent.getBoundingClientRect();
+    const scaledWidth = stage.offsetWidth * zoom;
+    const scaledHeight = stage.offsetHeight * zoom;
+    const minVisibleX = Math.min(scaledWidth, parentRect.width) * 0.3;
+    const minVisibleY = Math.min(scaledHeight, parentRect.height) * 0.3;
+    const maxX = Math.max(0, (scaledWidth + parentRect.width) / 2 - minVisibleX);
+    const maxY = Math.max(0, (scaledHeight + parentRect.height) / 2 - minVisibleY);
+
+    return {
+      x: Math.max(-maxX, Math.min(maxX, pan.x)),
+      y: Math.max(-maxY, Math.min(maxY, pan.y)),
+    };
+  };
+
+  const updateCanvasZoom = (zoom: number) => {
+    const nextZoom = Math.max(0.5, Math.min(3, Number(zoom.toFixed(2))));
+    setCanvasZoom(nextZoom);
+    setCanvasPan((prev) => clampCanvasPan(prev, nextZoom));
+  };
+
   const getLayerDisplayRect = (layer: Layer) => {
     if (!selectedFile || !canvasLayout.width || !canvasLayout.height) return null;
     const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
@@ -1116,7 +1141,7 @@ export default function App() {
       const deltaX = e.clientX - panStart.x;
       const deltaY = e.clientY - panStart.y;
       
-      setCanvasPan(prev => ({
+      setCanvasPan(prev => clampCanvasPan({
         x: prev.x + deltaX,
         y: prev.y + deltaY
       }));
@@ -1392,14 +1417,9 @@ export default function App() {
 
     if (e.ctrlKey || e.metaKey) {
       const zoomDelta = e.deltaY > 0 ? -0.1 : 0.1;
-      setCanvasZoom((prev) => Math.max(0.5, Math.min(3, Number((prev + zoomDelta).toFixed(2)))));
+      updateCanvasZoom(canvasZoom + zoomDelta);
       return;
     }
-
-    setCanvasPan(prev => ({
-      x: prev.x - e.deltaX,
-      y: prev.y - e.deltaY
-    }));
   };
 
   const handleCanvasPanMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1421,7 +1441,7 @@ export default function App() {
     const deltaX = e.clientX - panStart.x;
     const deltaY = e.clientY - panStart.y;
     
-    setCanvasPan(prev => ({
+    setCanvasPan(prev => clampCanvasPan({
       x: prev.x + deltaX,
       y: prev.y + deltaY
     }));
@@ -2199,41 +2219,6 @@ export default function App() {
                 )}
               </AnimatePresence>
 
-              <div className="absolute bottom-4 left-4 flex gap-2">
-                <div className="px-3 py-1 bg-black/70 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
-                  <div className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em]">Live Editor</span>
-                </div>
-                <div
-                  className="px-3 py-1.5 bg-black/75 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={(e) => e.stopPropagation()}
-                  onWheel={(e) => e.stopPropagation()}
-                >
-                  <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.22em]">
-                    Zoom {(canvasZoom * 100).toFixed(0)}%
-                  </span>
-                  <input
-                    type="range"
-                    min="50"
-                    max="300"
-                    step="5"
-                    value={Math.round(canvasZoom * 100)}
-                    onChange={(e) => setCanvasZoom(Number(e.target.value) / 100)}
-                    className="w-24 h-1 accent-blue-500 cursor-pointer"
-                    aria-label="Canvas zoom"
-                  />
-                </div>
-                {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
-                  <button
-                    onClick={() => setCanvasPan({ x: 0, y: 0 })}
-                    className="px-3 py-1 bg-black/70 border border-white/8 hover:border-white/14 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200"
-                    title="Reset pan to center"
-                  >
-                    Reset View
-                  </button>
-                )}
-              </div>
             </div>
           ) : (
             <div className="text-center space-y-4">
@@ -2247,6 +2232,43 @@ export default function App() {
                   AI will automatically detect faces, text, signatures, codes, and backgrounds.
                 </p>
               </div>
+            </div>
+          )}
+          {selectedFile && (
+            <div className="absolute bottom-5 left-1/2 z-30 flex -translate-x-1/2 flex-wrap items-center justify-center gap-2 px-3 pointer-events-none">
+              <div className="px-3 py-1 bg-black/75 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)] pointer-events-auto">
+                <div className="w-2 h-2 rounded-full bg-blue-500" />
+                <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em]">Live Editor</span>
+              </div>
+              <div
+                className="px-3 py-1.5 bg-black/80 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)] pointer-events-auto"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                onWheel={(e) => e.stopPropagation()}
+              >
+                <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.22em] whitespace-nowrap">
+                  Zoom {(canvasZoom * 100).toFixed(0)}%
+                </span>
+                <input
+                  type="range"
+                  min="50"
+                  max="300"
+                  step="5"
+                  value={Math.round(canvasZoom * 100)}
+                  onChange={(e) => updateCanvasZoom(Number(e.target.value) / 100)}
+                  className="w-28 h-1 accent-blue-500 cursor-pointer"
+                  aria-label="Canvas zoom"
+                />
+              </div>
+              {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
+                <button
+                  onClick={() => setCanvasPan({ x: 0, y: 0 })}
+                  className="px-3 py-1 bg-black/75 border border-white/8 hover:border-white/14 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200 pointer-events-auto"
+                  title="Reset pan to center"
+                >
+                  Reset View
+                </button>
+              )}
             </div>
           )}
         </div>
