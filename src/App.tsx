@@ -2204,8 +2204,25 @@ export default function App() {
                   <div className="w-2 h-2 rounded-full bg-blue-500" />
                   <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em]">Live Editor</span>
                 </div>
-                <div className="px-3 py-1 bg-black/70 border border-white/8 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
-                  Zoom {(canvasZoom * 100).toFixed(0)}%
+                <div
+                  className="px-3 py-1.5 bg-black/75 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)]"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                >
+                  <span className="text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.22em]">
+                    Zoom {(canvasZoom * 100).toFixed(0)}%
+                  </span>
+                  <input
+                    type="range"
+                    min="50"
+                    max="300"
+                    step="5"
+                    value={Math.round(canvasZoom * 100)}
+                    onChange={(e) => setCanvasZoom(Number(e.target.value) / 100)}
+                    className="w-24 h-1 accent-blue-500 cursor-pointer"
+                    aria-label="Canvas zoom"
+                  />
                 </div>
                 {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
                   <button
