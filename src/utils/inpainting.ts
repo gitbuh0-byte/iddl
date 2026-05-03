@@ -110,6 +110,215 @@ function blurInpaint(canvas: HTMLCanvasElement, mask: HTMLCanvasElement): HTMLCa
 }
 
 /**
+ * Removes the masked pixels by sampling the nearest surrounding background.
+ * Unlike OpenCV inpaint on large regions, this never writes outside the white mask.
+ */
+export function removeMaskedRegionPreserveBackground(
+  canvas: HTMLCanvasElement,
+  mask: HTMLCanvasElement
+): HTMLCanvasElement {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const maskCtx = mask.getContext('2d', { willReadFrequently: true });
+  if (!ctx || !maskCtx) throw new Error('Failed to get canvas context');
+
+  const output = document.createElement('canvas');
+  output.width = canvas.width;
+  output.height = canvas.height;
+  const outCtx = output.getContext('2d', { willReadFrequently: true });
+  if (!outCtx) throw new Error('Failed to create output context');
+  outCtx.drawImage(canvas, 0, 0);
+
+  const sourceData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const outputData = outCtx.getImageData(0, 0, output.width, output.height);
+  const maskData = maskCtx.getImageData(0, 0, mask.width, mask.height);
+  const source = sourceData.data;
+  const pixels = outputData.data;
+  const maskPixels = maskData.data;
+  const masked = new Uint8Array(canvas.width * canvas.height);
+
+  let minX = canvas.width;
+  let minY = canvas.height;
+  let maxX = -1;
+  let maxY = -1;
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const pixelIndex = y * canvas.width + x;
+      const maskIndex = pixelIndex * 4;
+      if (maskPixels[maskIndex] > 128) {
+        masked[pixelIndex] = 1;
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+    }
+  }
+
+  if (maxX < minX || maxY < minY) return output;
+
+  const fallback = [0, 0, 0, 0];
+  let fallbackCount = 0;
+  const ringPadding = 12;
+  const ringMinX = Math.max(0, minX - ringPadding);
+  const ringMinY = Math.max(0, minY - ringPadding);
+  const ringMaxX = Math.min(canvas.width - 1, maxX + ringPadding);
+  const ringMaxY = Math.min(canvas.height - 1, maxY + ringPadding);
+
+  for (let y = ringMinY; y <= ringMaxY; y++) {
+    for (let x = ringMinX; x <= ringMaxX; x++) {
+      const inSelectedBox = x >= minX && x <= maxX && y >= minY && y <= maxY;
+      const pixelIndex = y * canvas.width + x;
+      if (!inSelectedBox && !masked[pixelIndex]) {
+        const i = pixelIndex * 4;
+        fallback[0] += source[i];
+        fallback[1] += source[i + 1];
+        fallback[2] += source[i + 2];
+        fallback[3] += source[i + 3];
+        fallbackCount++;
+      }
+    }
+  }
+
+  if (fallbackCount > 0) {
+    fallback[0] /= fallbackCount;
+    fallback[1] /= fallbackCount;
+    fallback[2] /= fallbackCount;
+    fallback[3] /= fallbackCount;
+  } else {
+    fallback[3] = 255;
+  }
+
+  const getUnmaskedAverage = (x: number, y: number, radius = 3) => {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let a = 0;
+    let count = 0;
+
+    for (let yy = Math.max(0, y - radius); yy <= Math.min(canvas.height - 1, y + radius); yy++) {
+      for (let xx = Math.max(0, x - radius); xx <= Math.min(canvas.width - 1, x + radius); xx++) {
+        const pixelIndex = yy * canvas.width + xx;
+        if (masked[pixelIndex]) continue;
+        const i = pixelIndex * 4;
+        r += source[i];
+        g += source[i + 1];
+        b += source[i + 2];
+        a += source[i + 3];
+        count++;
+      }
+    }
+
+    return count > 0 ? [r / count, g / count, b / count, a / count] : fallback;
+  };
+
+  const leftSamples: Array<number[] | null> = new Array(canvas.height).fill(null);
+  const rightSamples: Array<number[] | null> = new Array(canvas.height).fill(null);
+  const topSamples: Array<number[] | null> = new Array(canvas.width).fill(null);
+  const bottomSamples: Array<number[] | null> = new Array(canvas.width).fill(null);
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let sx = minX - 1; sx >= 0; sx--) {
+      if (!masked[y * canvas.width + sx]) {
+        leftSamples[y] = getUnmaskedAverage(sx, y);
+        break;
+      }
+    }
+    for (let sx = maxX + 1; sx < canvas.width; sx++) {
+      if (!masked[y * canvas.width + sx]) {
+        rightSamples[y] = getUnmaskedAverage(sx, y);
+        break;
+      }
+    }
+  }
+
+  for (let x = minX; x <= maxX; x++) {
+    for (let sy = minY - 1; sy >= 0; sy--) {
+      if (!masked[sy * canvas.width + x]) {
+        topSamples[x] = getUnmaskedAverage(x, sy);
+        break;
+      }
+    }
+    for (let sy = maxY + 1; sy < canvas.height; sy++) {
+      if (!masked[sy * canvas.width + x]) {
+        bottomSamples[x] = getUnmaskedAverage(x, sy);
+        break;
+      }
+    }
+  }
+
+  for (let y = minY; y <= maxY; y++) {
+    for (let x = minX; x <= maxX; x++) {
+      const pixelIndex = y * canvas.width + x;
+      if (!masked[pixelIndex]) continue;
+
+      const candidates = [
+        { color: leftSamples[y], weight: 1 / Math.max(1, x - minX + 1) },
+        { color: rightSamples[y], weight: 1 / Math.max(1, maxX - x + 1) },
+        { color: topSamples[x], weight: 1 / Math.max(1, y - minY + 1) },
+        { color: bottomSamples[x], weight: 1 / Math.max(1, maxY - y + 1) },
+      ].filter((candidate): candidate is { color: number[]; weight: number } => Boolean(candidate.color));
+
+      let color = fallback;
+      if (candidates.length > 0) {
+        const totalWeight = candidates.reduce((sum, candidate) => sum + candidate.weight, 0);
+        color = [0, 0, 0, 0];
+        candidates.forEach((candidate) => {
+          const factor = candidate.weight / totalWeight;
+          color[0] += candidate.color[0] * factor;
+          color[1] += candidate.color[1] * factor;
+          color[2] += candidate.color[2] * factor;
+          color[3] += candidate.color[3] * factor;
+        });
+      }
+
+      const i = pixelIndex * 4;
+      pixels[i] = color[0];
+      pixels[i + 1] = color[1];
+      pixels[i + 2] = color[2];
+      pixels[i + 3] = color[3];
+    }
+  }
+
+  // Smooth only the replaced pixels so the surrounding document remains untouched.
+  for (let pass = 0; pass < 2; pass++) {
+    const previous = new Uint8ClampedArray(pixels);
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const pixelIndex = y * canvas.width + x;
+        if (!masked[pixelIndex]) continue;
+
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let a = 0;
+        let count = 0;
+
+        for (let yy = Math.max(0, y - 1); yy <= Math.min(canvas.height - 1, y + 1); yy++) {
+          for (let xx = Math.max(0, x - 1); xx <= Math.min(canvas.width - 1, x + 1); xx++) {
+            const i = (yy * canvas.width + xx) * 4;
+            r += previous[i];
+            g += previous[i + 1];
+            b += previous[i + 2];
+            a += previous[i + 3];
+            count++;
+          }
+        }
+
+        const i = pixelIndex * 4;
+        pixels[i] = r / count;
+        pixels[i + 1] = g / count;
+        pixels[i + 2] = b / count;
+        pixels[i + 3] = a / count;
+      }
+    }
+  }
+
+  outCtx.putImageData(outputData, 0, 0);
+  return output;
+}
+
+/**
  * Inpaint an image region using OpenCV
  */
 export async function inpaintImage(params: InpaintingParams): Promise<HTMLCanvasElement> {

@@ -8,7 +8,7 @@ import {
   BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun, MoreHorizontal
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
-import { loadOpenCV, createMask, inpaintImage } from "./utils/inpainting";
+import { loadOpenCV, createMask, removeMaskedRegionPreserveBackground } from "./utils/inpainting";
 import { analyzeImageWithOpenCV } from "./utils/opencvAnalysis";
 import { Login } from "./components/Login";
 
@@ -1470,13 +1470,9 @@ export default function App() {
       console.log(`Creating mask for layer: ${layer.name} at full resolution`);
       const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, regions, 0);
 
-      // Perform inpainting on full resolution
-      console.log("Starting inpainting process...");
-      const inpaintedCanvas = await inpaintImage({
-        canvas: fullCanvas,
-        mask: maskCanvas,
-        method: "telea",
-      });
+      // Replace only the masked pixels with sampled background. This avoids large-region OpenCV warping.
+      console.log("Starting background-preserving removal process...");
+      const inpaintedCanvas = removeMaskedRegionPreserveBackground(fullCanvas, maskCanvas);
 
       console.log("Inpainting complete, saving result...");
       
@@ -1570,13 +1566,9 @@ export default function App() {
       console.log(`Creating mask for ${componentLayers.length} selected components at full resolution...`);
       const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, componentLayers, 0);
 
-      // Perform inpainting on full resolution
-      console.log("Starting inpainting process...");
-      const inpaintedCanvas = await inpaintImage({
-        canvas: fullCanvas,
-        mask: maskCanvas,
-        method: "telea",
-      });
+      // Replace only the masked pixels with sampled background. This avoids large-region OpenCV warping.
+      console.log("Starting background-preserving removal process...");
+      const inpaintedCanvas = removeMaskedRegionPreserveBackground(fullCanvas, maskCanvas);
 
       console.log("Inpainting complete, saving result...");
       
