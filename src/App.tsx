@@ -64,6 +64,7 @@ interface ManagedFile {
 
 const REMOVABLE_LAYER_TYPES = new Set<Layer["type"]>(["face", "text", "signature", "code"]);
 const isRemovableLayer = (layer: Layer) => REMOVABLE_LAYER_TYPES.has(layer.type);
+const isCanvasEditableLayer = (layer: Layer) => !layer.locked && layer.type !== "background";
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -190,7 +191,7 @@ export default function App() {
   };
 
   const getResizeHandleAtPoint = (layer: Layer, x: number, y: number) => {
-    // Support resizing for image, text, and signature layers
+    if (!isCanvasEditableLayer(layer)) return null;
     const rect = getLayerDisplayRect(layer);
     if (!rect) return null;
     const handleSize = 14;
@@ -259,6 +260,7 @@ export default function App() {
         : f
     ));
     setSelectedLayerId(newLayer.id);
+    setSelectedBaseImage(false);
   };
 
   const openOverlayImagePicker = () => {
@@ -501,6 +503,7 @@ export default function App() {
         : f
     ));
     setSelectedLayerId(pastedLayer.id);
+    setSelectedBaseImage(false);
     setClipboardIsBaseImage(false);
   };
 
@@ -985,21 +988,11 @@ export default function App() {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    if (editMode && drawingLayer) {
-      setSelectedLayerId(null);
-      setSelectedBaseImage(false);
-      setDragStart({ x, y });
-      setCurrentDrag({ x, y });
-      setIsDragging(true);
-      return;
-    }
-
-    // Use actual canvas dimensions from ref to ensure accurate coordinate calculations
-    const actualWidth = canvasDimensionsRef.current.width || rect.width;
-    const actualHeight = canvasDimensionsRef.current.height || rect.height;
+    const displayX = x * canvasLayout.width;
+    const displayY = y * canvasLayout.height;
 
     if (selectedBaseImage && !selectedLayer && !editMode) {
-      const handle = getBaseCropHandleAtPoint(x * actualWidth, y * actualHeight);
+      const handle = getBaseCropHandleAtPoint(displayX, displayY);
       const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
 
       if (handle) {
@@ -1021,7 +1014,7 @@ export default function App() {
       return;
     }
 
-    const clickedLayer = getTopLayerAtPoint(x * actualWidth, y * actualHeight);
+    const clickedLayer = getTopLayerAtPoint(displayX, displayY);
     
     if (clickedLayer) {
       setSelectedBaseImage(false);
@@ -1032,9 +1025,8 @@ export default function App() {
         setSelectedComponentsToRemove((prev) => prev.includes(clickedLayer.id) ? prev : [...prev, clickedLayer.id]);
       }
 
-      // Allow resizing for image, text, and signature layers
-      if (!clickedLayer.locked && (clickedLayer.type === "image" || clickedLayer.type === "text" || clickedLayer.type === "signature")) {
-        const handle = getResizeHandleAtPoint(clickedLayer, x * actualWidth, y * actualHeight);
+      if (isCanvasEditableLayer(clickedLayer)) {
+        const handle = getResizeHandleAtPoint(clickedLayer, displayX, displayY);
         if (handle) {
           const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
           pushSnapshot();
@@ -1051,7 +1043,7 @@ export default function App() {
         }
       }
 
-      if (!editMode && !clickedLayer.locked) {
+      if (!clickedLayer.locked) {
         const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
         const cropWidth = fileCrop.width || 1;
         const cropHeight = fileCrop.height || 1;
@@ -1072,12 +1064,21 @@ export default function App() {
       }
     }
 
+    if (editMode && drawingLayer) {
+      setSelectedLayerId(null);
+      setSelectedBaseImage(false);
+      setDragStart({ x, y });
+      setCurrentDrag({ x, y });
+      setIsDragging(true);
+      return;
+    }
+
     if (!clickedLayer) {
       setSelectedLayerId(null);
       setSelectedBaseImage(true);
 
       if (!editMode) {
-        const handle = getBaseCropHandleAtPoint(x * actualWidth, y * actualHeight);
+        const handle = getBaseCropHandleAtPoint(displayX, displayY);
         const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
 
         if (handle) {
@@ -2110,7 +2111,7 @@ export default function App() {
                 style={{ touchAction: "none", cursor: isPanning ? "grabbing" : editMode ? "crosshair" : "grab" }}
                 className="w-full block h-auto"
               />
-              {selectedLayer?.type === "image" && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
+              {selectedLayer && isCanvasEditableLayer(selectedLayer) && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
                 const rect = getLayerDisplayRect(selectedLayer);
                 if (!rect) return null;
                 const handles = [
@@ -2423,7 +2424,10 @@ export default function App() {
                 selectedFile?.layers.map((layer: Layer) => (
                   <div 
                     key={layer.id}
-                    onClick={() => setSelectedLayerId(layer.id)}
+                    onClick={() => {
+                      setSelectedLayerId(layer.id);
+                      setSelectedBaseImage(false);
+                    }}
                     className={`group flex items-center gap-2 p-2 rounded-md transition-all border cursor-pointer ${
                       selectedLayer?.id === layer.id 
                         ? "bg-[var(--bg-secondary)] border-neutral-700/40" 
