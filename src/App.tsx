@@ -65,6 +65,7 @@ interface ManagedFile {
 const REMOVABLE_LAYER_TYPES = new Set<Layer["type"]>(["face", "text", "signature", "code"]);
 const isRemovableLayer = (layer: Layer) => REMOVABLE_LAYER_TYPES.has(layer.type);
 const isCanvasEditableLayer = (layer: Layer) => !layer.locked && layer.type !== "background";
+const getDefaultFontSize = (layer: Layer) => layer.fontSize || (layer.type === "signature" ? 38 : 28);
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1159,6 +1160,12 @@ export default function App() {
         updates.y = Math.min(1 - original.height, Math.max(0, original.y + dy * cropHeight));
         updates.width = Math.max(0.05, original.width - dx * cropWidth);
         updates.height = Math.max(0.05, original.height - dy * cropHeight);
+      }
+
+      if ((original.type === "text" || original.type === "signature") && original.text) {
+        const nextHeight = updates.height ?? original.height;
+        const fontScale = nextHeight / Math.max(0.001, original.height);
+        updates.fontSize = Math.max(8, Math.min(180, Math.round(getDefaultFontSize(original) * fontScale)));
       }
 
       setFiles((prev) => prev.map((file) => {
