@@ -167,8 +167,8 @@ export default function App() {
   };
 
   const activeToolClass = (isActive: boolean) => {
-    if (!isActive) return "border-white/8 bg-[#111111] text-neutral-300 hover:border-white/20 hover:text-white";
-    return "border-blue-400/80 bg-blue-500/25 text-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_24px_rgba(59,130,246,0.7),inset_0_1px_0_rgba(255,255,255,0.12)]";
+    if (!isActive) return "border-white/8 bg-[#111111] text-neutral-300 hover:border-blue-400/40 hover:text-white";
+    return "scale-[1.03] border-blue-300 bg-blue-500/45 text-white ring-2 ring-blue-400/80 shadow-[0_0_0_1px_rgba(147,197,253,0.7),0_0_36px_rgba(59,130,246,0.95),0_0_70px_rgba(37,99,235,0.45),inset_0_1px_0_rgba(255,255,255,0.22)]";
   };
 
   const flashTool = (tool: string) => {
@@ -176,7 +176,7 @@ export default function App() {
     if (activeActionTimerRef.current) window.clearTimeout(activeActionTimerRef.current);
     activeActionTimerRef.current = window.setTimeout(() => {
       setActiveActionTool((current) => (current === tool ? null : current));
-    }, 1000);
+    }, 1800);
   };
 
   useEffect(() => {
@@ -878,6 +878,11 @@ export default function App() {
             return;
           }
 
+          const shouldDrawDetectionMarker = isRemovingText && selectedComponentsToRemove.includes(layer.id);
+          if (!shouldDrawDetectionMarker) {
+            return;
+          }
+
           ctx.globalAlpha = layer.opacity;
           const colors = {
             face: { fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6" },
@@ -962,7 +967,7 @@ export default function App() {
     };
 
     drawCanvas();
-  }, [selectedFile, selectedLayer, selectedBaseImage, isDragging, dragStart, currentDrag, drawingLayer]);
+  }, [selectedFile, selectedLayer, selectedBaseImage, isDragging, dragStart, currentDrag, drawingLayer, isRemovingText, selectedComponentsToRemove]);
 
   // Load OpenCV for text inpainting
   useEffect(() => {
