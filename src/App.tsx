@@ -1046,24 +1046,21 @@ export default function App() {
         const handle = getBaseCropHandleAtPoint(x * actualWidth, y * actualHeight);
         const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
 
-        pushSnapshot();
-        clearRedoStack();
-
         if (handle) {
+          pushSnapshot();
+          clearRedoStack();
           setBaseImageResizeInfo({
             anchor: handle,
             start: { x, y },
             crop: fileCrop,
           });
         } else {
-          setBaseImageDrag({
-            origin: { x, y },
-            crop: fileCrop,
-          });
+          setIsPanning(true);
+          setPanStart({ x: e.clientX, y: e.clientY });
         }
 
         setDragMoved(false);
-        setIsDragging(true);
+        setIsDragging(Boolean(handle));
         return;
       }
     }
@@ -1684,7 +1681,7 @@ export default function App() {
       {!isAuthenticated ? (
         <Login onLoginSuccess={() => setIsAuthenticated(true)} />
       ) : (
-        <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
+        <div data-theme={theme} className="h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="border-b border-white/6 bg-[#08090d]/95 backdrop-blur-md z-50 shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
@@ -2175,7 +2172,7 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none min-h-0"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none min-h-0 h-full"}>
           <div className="rounded-[16px] bg-[#121a2b] px-3 py-2.5 border border-white/6">
             <input
               type="range"
@@ -2411,7 +2408,7 @@ export default function App() {
 
           {/* Layer Properties */}
           {selectedLayer && (
-            <div className="space-y-4 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800 max-h-[42vh] overflow-y-auto pr-2">
+            <div className="space-y-4 p-4 rounded-xl bg-neutral-900/30 border border-neutral-800">
               <h4 className="text-[10px] font-bold text-neutral-600 uppercase tracking-[0.2em]">Layer Properties</h4>
               
               <div className="space-y-3">
