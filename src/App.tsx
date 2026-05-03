@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
 import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
+import { analyzeImageWithOpenCV } from "./utils/opencvAnalysis";
 import { Login } from "./components/Login";
 
 interface DetectionResult {
@@ -506,17 +507,27 @@ export default function App() {
 
   const analyzeImage = async (file: File, fileId: string) => {
     try {
-      const formData = new FormData();
-      formData.append("image", file);
+      let analysis: DetectionResult | null = null;
 
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+      try {
+        analysis = await analyzeImageWithOpenCV(file) as DetectionResult;
+      } catch (opencvError) {
+        console.warn("OpenCV analysis unavailable, falling back to server analysis:", opencvError);
+        const formData = new FormData();
+        formData.append("image", file);
 
-      const data = await response.json();
-      if (data.analysis) {
-        const analysis = data.analysis as DetectionResult;
+        const response = await fetch("/api/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (data.analysis) {
+          analysis = data.analysis as DetectionResult;
+        }
+      }
+
+      if (analysis) {
         
         // Convert percentage-based coordinates to normalized 0-1 range
         const layers: Layer[] = [];
@@ -592,6 +603,21 @@ export default function App() {
             opacity: 1,
           });
         });
+
+        if (analysis.backgrounds.length > 0) {
+          layers.push({
+            id: `background-${layerId++}`,
+            name: `Background ${analysis.backgrounds[0].type}`,
+            type: "background",
+            x: 0,
+            y: 0,
+            width: 1,
+            height: 1,
+            visible: true,
+            locked: true,
+            opacity: 0.15,
+          });
+        }
 
         pushSnapshot();
         clearRedoStack();
@@ -1516,11 +1542,11 @@ export default function App() {
               <ImageIcon className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
-              <span className="font-semibold text-[13px] tracking-tight block leading-none text-white">Photo Studio</span>
-              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.38em] font-mono">AI Editor</span>
+              <span className="font-semibold text-[12px] tracking-tight block leading-none text-white">Photo Studio</span>
+              <span className="text-[7px] text-neutral-500 uppercase tracking-[0.34em] font-mono">AI Editor</span>
             </div>
             <div className="hidden md:block h-8 w-px bg-white/8" />
-            <div className="hidden md:inline-flex items-center gap-2 text-[8px] uppercase tracking-[0.24em] text-neutral-400">
+            <div className="hidden md:inline-flex items-center gap-2 text-[7px] uppercase tracking-[0.22em] text-neutral-400">
               <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? "bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]" : "bg-amber-400"}`}></span>
               <span>{openCVLoaded ? "OpenCV Ready" : "Loading"}</span>
             </div>
@@ -1602,7 +1628,7 @@ export default function App() {
               type="button"
               onClick={handleUndo}
               disabled={!canUndo}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 min-w-[104px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Undo
@@ -1611,7 +1637,7 @@ export default function App() {
               type="button"
               onClick={handleRedo}
               disabled={!canRedo}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 min-w-[104px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
             >
               <ArrowRight className="w-3.5 h-3.5" />
               Redo
@@ -1744,7 +1770,7 @@ export default function App() {
               type="button"
               onClick={() => exportAsset("png")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
             >
               <ImageIcon className="w-3.5 h-3.5" />
               PNG
@@ -1753,7 +1779,7 @@ export default function App() {
               type="button"
               onClick={() => exportAsset("jpg")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-white/8 bg-[#191919] text-[10px] font-bold uppercase tracking-[0.12em] text-neutral-200 disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-white/8 bg-[#191919] text-[9px] font-semibold uppercase tracking-[0.1em] text-neutral-200 disabled:opacity-40"
             >
               <ImageIcon className="w-3.5 h-3.5" />
               JPG
@@ -1762,7 +1788,7 @@ export default function App() {
               type="button"
               onClick={() => exportAsset("psd")}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-400/20 bg-blue-600 text-[10px] font-bold uppercase tracking-[0.12em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 min-w-[92px] px-3 py-2 rounded-xl border border-blue-400/20 bg-blue-600 text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
             >
               <Download className="w-3.5 h-3.5" />
               PSD
@@ -1772,7 +1798,7 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-red-500/20 bg-[#1a0909] text-[10px] font-bold uppercase tracking-[0.12em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
+              className="inline-flex items-center justify-center gap-2 min-w-[122px] px-3 py-2 rounded-xl border border-red-500/20 bg-[#1a0909] text-[9px] font-semibold uppercase tracking-[0.1em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
               title="Logout"
             >
               <LogOut className="w-3.5 h-3.5" />
@@ -1840,7 +1866,7 @@ export default function App() {
                 <div className="p-4 rounded-3xl bg-[#1a2134] border border-white/5">
                   <Plus className="w-5 h-5" />
                 </div>
-                <span className="text-[9px] font-semibold">Upload</span>
+                <span className="text-[8px] font-semibold">Upload</span>
               </button>
             )}
           </div>
@@ -1968,8 +1994,8 @@ export default function App() {
                 <ImageIcon className="w-8 h-8 text-neutral-800 group-hover:text-neutral-600 transition-colors" />
               </div>
               <div className="space-y-2">
-                <h3 className="text-lg font-bold text-white tracking-tight">Upload Your Photo</h3>
-                <p className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] font-medium max-w-xs mx-auto leading-relaxed">
+                <h3 className="text-[14px] font-bold text-white tracking-tight">Upload Your Photo</h3>
+                <p className="text-[8px] text-neutral-500 uppercase tracking-[0.18em] font-medium max-w-xs mx-auto leading-relaxed">
                   AI will automatically detect faces, text, signatures, codes, and backgrounds.
                 </p>
               </div>
@@ -1998,7 +2024,7 @@ export default function App() {
           </div>
 
           <div className="flex items-center justify-between px-1">
-            <span className="text-[10px] font-semibold text-white tracking-tight">Detected Layers</span>
+            <span className="text-[9px] font-semibold text-white tracking-tight">Detected Layers</span>
             <span className="text-[8px] text-neutral-500 font-mono">#{selectedFile?.layers.length || 0}</span>
           </div>
 

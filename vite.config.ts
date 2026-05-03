@@ -12,29 +12,25 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
+        includeAssets: ['favicon.svg', 'pwa-icon.svg'],
         manifest: {
           name: 'Photo Studio',
-          short_name: 'Photo Studio',
-          description: 'AI-powered image editor with overlays, crop, drag and theme modes.',
+          short_name: 'Studio',
+          description: 'AI-powered document and photo editor with OpenCV.js analysis and inpainting.',
           theme_color: '#050505',
           background_color: '#050505',
           display: 'standalone',
           start_url: '/',
           icons: [
             {
-              src: 'pwa-192x192.png',
-              sizes: '192x192',
-              type: 'image/png',
+              src: 'pwa-icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
             },
             {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
-            },
-            {
-              src: 'pwa-512x512.png',
-              sizes: '512x512',
-              type: 'image/png',
+              src: 'pwa-icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
               purpose: 'any maskable',
             },
           ],
