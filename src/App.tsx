@@ -164,16 +164,9 @@ export default function App() {
     updateLayer(selectedLayer.id, updates);
   };
 
-  const activeToolClass = (isActive: boolean, tone: "blue" | "red" | "purple" | "green" | "amber" = "blue") => {
+  const activeToolClass = (isActive: boolean) => {
     if (!isActive) return "border-transparent bg-transparent text-neutral-500 hover:text-white";
-    const glow = {
-      blue: "border-blue-400/70 bg-blue-500/20 text-blue-100 shadow-[0_0_0_1px_rgba(96,165,250,0.45),0_0_22px_rgba(59,130,246,0.55)]",
-      red: "border-red-400/70 bg-red-500/20 text-red-100 shadow-[0_0_0_1px_rgba(248,113,113,0.45),0_0_22px_rgba(239,68,68,0.55)]",
-      purple: "border-violet-400/70 bg-violet-500/20 text-violet-100 shadow-[0_0_0_1px_rgba(167,139,250,0.45),0_0_22px_rgba(139,92,246,0.55)]",
-      green: "border-emerald-400/70 bg-emerald-500/20 text-emerald-100 shadow-[0_0_0_1px_rgba(52,211,153,0.45),0_0_22px_rgba(16,185,129,0.55)]",
-      amber: "border-amber-400/70 bg-amber-500/20 text-amber-100 shadow-[0_0_0_1px_rgba(251,191,36,0.45),0_0_22px_rgba(245,158,11,0.55)]",
-    };
-    return glow[tone];
+    return "border-blue-400/70 bg-blue-500/20 text-blue-100 shadow-[0_0_0_1px_rgba(96,165,250,0.45),0_0_22px_rgba(59,130,246,0.55)]";
   };
 
   const clampCanvasPan = (pan: { x: number; y: number }, zoom = canvasZoom) => {
@@ -844,6 +837,10 @@ export default function App() {
             ctx.fillText(text, textX, textY);
             ctx.restore();
 
+            return;
+          }
+
+          if (selectedLayer?.id === layer.id && isCanvasEditableLayer(layer)) {
             return;
           }
 
@@ -1773,7 +1770,7 @@ export default function App() {
                 type="button"
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(!editMode, "blue")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(!editMode)}`}
               >
                 <MousePointer2 className="w-3.5 h-3.5" />
               </button>
@@ -1781,7 +1778,7 @@ export default function App() {
                 type="button"
                 title="Face region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "face", "blue")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "face")}`}
               >
                 <User className="w-3.5 h-3.5" />
               </button>
@@ -1789,7 +1786,7 @@ export default function App() {
                 type="button"
                 title="Text region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "text", "red")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "text")}`}
               >
                 <FileText className="w-3.5 h-3.5" />
               </button>
@@ -1797,7 +1794,7 @@ export default function App() {
                 type="button"
                 title="Erase component"
                 onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "signature", "purple")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "signature")}`}
               >
                 <Eraser className="w-3.5 h-3.5" />
               </button>
@@ -1805,7 +1802,7 @@ export default function App() {
                 type="button"
                 title="Code region"
                 onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "code", "green")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "code")}`}
               >
                 <Code className="w-3.5 h-3.5" />
               </button>
@@ -1830,7 +1827,7 @@ export default function App() {
                   }
                 }}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all disabled:opacity-40 ${activeToolClass(isRemovingText, "amber")}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all disabled:opacity-40 ${activeToolClass(isRemovingText)}`}
               >
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
