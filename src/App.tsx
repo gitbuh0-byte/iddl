@@ -71,6 +71,7 @@ export default function App() {
   const [exportFormat, setExportFormat] = useState<"png" | "jpg" | "psd" | null>(null);
   
   const [isDragging, setIsDragging] = useState(false);
+  const [dragMoved, setDragMoved] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [currentDrag, setCurrentDrag] = useState<{ x: number, y: number } | null>(null);
   const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
@@ -911,6 +912,7 @@ export default function App() {
             layer: clickedLayer,
             crop: fileCrop,
           });
+          setDragMoved(false);
           setIsDragging(true);
           return;
         }
@@ -931,6 +933,7 @@ export default function App() {
           start: { x: displayStartX, y: displayStartY },
           crop: fileCrop,
         });
+        setDragMoved(false);
         setIsDragging(true);
         return;
       }
@@ -996,6 +999,17 @@ export default function App() {
     }
 
     if (selectedLayerDrag && selectedFile) {
+      const moveDistancePx = Math.hypot(
+        (x - selectedLayerDrag.origin.x) * canvasLayout.width,
+        (y - selectedLayerDrag.origin.y) * canvasLayout.height
+      );
+      if (!dragMoved && moveDistancePx < 6) {
+        return;
+      }
+      if (!dragMoved) {
+        setDragMoved(true);
+      }
+
       const draggedLayer = selectedFile.layers.find((layer) => layer.id === selectedLayerDrag.layerId);
       if (!draggedLayer) return;
 
@@ -1026,6 +1040,14 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
+    if (selectedLayerDrag && !dragMoved) {
+      setSelectedLayerDrag(null);
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      return;
+    }
+
     if (selectedLayerDrag) {
       setSelectedLayerDrag(null);
       setIsDragging(false);
