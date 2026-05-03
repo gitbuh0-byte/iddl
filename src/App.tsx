@@ -8,7 +8,7 @@ import {
   BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun, MoreHorizontal
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
-import { loadOpenCV, createMask, dilateMask, inpaintImage } from "./utils/inpainting";
+import { loadOpenCV, createMask, inpaintImage } from "./utils/inpainting";
 import { analyzeImageWithOpenCV } from "./utils/opencvAnalysis";
 import { Login } from "./components/Login";
 
@@ -1023,6 +1023,9 @@ export default function App() {
       }
       if (isRemovingText && isRemovableLayer(clickedLayer)) {
         setSelectedComponentsToRemove((prev) => prev.includes(clickedLayer.id) ? prev : [...prev, clickedLayer.id]);
+        setDragMoved(false);
+        setIsDragging(false);
+        return;
       }
 
       if (isCanvasEditableLayer(clickedLayer)) {
@@ -1465,16 +1468,13 @@ export default function App() {
       }];
 
       console.log(`Creating mask for layer: ${layer.name} at full resolution`);
-      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, regions);
-      
-      console.log("Dilating mask...");
-      const dilatedMask = dilateMask(maskCanvas, 2);
+      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, regions, 0);
 
       // Perform inpainting on full resolution
       console.log("Starting inpainting process...");
       const inpaintedCanvas = await inpaintImage({
         canvas: fullCanvas,
-        mask: dilatedMask,
+        mask: maskCanvas,
         method: "telea",
       });
 
@@ -1568,16 +1568,13 @@ export default function App() {
       }
 
       console.log(`Creating mask for ${componentLayers.length} selected components at full resolution...`);
-      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, componentLayers);
-      
-      console.log("Dilating mask...");
-      const dilatedMask = dilateMask(maskCanvas, 3);
+      const maskCanvas = createMask(fullCanvas.width, fullCanvas.height, componentLayers, 0);
 
       // Perform inpainting on full resolution
       console.log("Starting inpainting process...");
       const inpaintedCanvas = await inpaintImage({
         canvas: fullCanvas,
-        mask: dilatedMask,
+        mask: maskCanvas,
         method: "telea",
       });
 

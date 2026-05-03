@@ -209,7 +209,8 @@ async function inpaintImageWithOpenCV(
 export function createMask(
   width: number,
   height: number,
-  regions: Array<{ x: number; y: number; width: number; height: number }>
+  regions: Array<{ x: number; y: number; width: number; height: number }>,
+  padding = 0
 ): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = width;
@@ -230,13 +231,17 @@ export function createMask(
     const pw = region.width * width;
     const ph = region.height * height;
 
-    // Add padding to regions
-    const padding = 8;
+    // Keep mask bounds exact by default so inpainting never reaches beyond the selected area.
+    const x0 = Math.max(0, px - padding);
+    const y0 = Math.max(0, py - padding);
+    const x1 = Math.min(width, px + pw + padding);
+    const y1 = Math.min(height, py + ph + padding);
+
     ctx.fillRect(
-      Math.max(0, px - padding),
-      Math.max(0, py - padding),
-      Math.min(width, pw + padding * 2),
-      Math.min(height, ph + padding * 2)
+      x0,
+      y0,
+      Math.max(0, x1 - x0),
+      Math.max(0, y1 - y0)
     );
   });
 
