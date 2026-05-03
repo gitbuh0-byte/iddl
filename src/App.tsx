@@ -94,6 +94,7 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">("dark");
   const [viewMode, setViewMode] = useState<"editor" | "preview">("editor");
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
+  const [activeActionTool, setActiveActionTool] = useState<string | null>(null);
   const [canvasLayout, setCanvasLayout] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [layerResizeInfo, setLayerResizeInfo] = useState<{
     anchor: "nw" | "ne" | "se" | "sw";
@@ -125,6 +126,7 @@ export default function App() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const activeActionTimerRef = useRef<number | null>(null);
 
   const selectedFile = files.find(f => f.id === selectedFileId);
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
@@ -165,9 +167,32 @@ export default function App() {
   };
 
   const activeToolClass = (isActive: boolean) => {
-    if (!isActive) return "border-transparent bg-transparent text-neutral-500 hover:text-white";
-    return "border-blue-400/70 bg-blue-500/20 text-blue-100 shadow-[0_0_0_1px_rgba(96,165,250,0.45),0_0_22px_rgba(59,130,246,0.55)]";
+    if (!isActive) return "border-white/8 bg-[#111111] text-neutral-300 hover:border-white/20 hover:text-white";
+    return "border-blue-400/80 bg-blue-500/25 text-blue-50 shadow-[0_0_0_1px_rgba(96,165,250,0.55),0_0_24px_rgba(59,130,246,0.7),inset_0_1px_0_rgba(255,255,255,0.12)]";
   };
+
+  const flashTool = (tool: string) => {
+    setActiveActionTool(tool);
+    if (activeActionTimerRef.current) window.clearTimeout(activeActionTimerRef.current);
+    activeActionTimerRef.current = window.setTimeout(() => {
+      setActiveActionTool((current) => (current === tool ? null : current));
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (activeActionTimerRef.current) window.clearTimeout(activeActionTimerRef.current);
+    };
+  }, []);
+
+  const toolbarToolClass = (isActive: boolean) =>
+    `grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all duration-200 ${activeToolClass(isActive)}`;
+
+  const toolbarActionClass = (isActive: boolean, minWidth = "min-w-[74px]") =>
+    `inline-flex items-center justify-center gap-1.5 ${minWidth} h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all duration-200 disabled:opacity-40 ${activeToolClass(isActive)}`;
+
+  const menuToolClass = (isActive: boolean) =>
+    `flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl text-[10px] font-semibold uppercase border transition-all duration-200 disabled:opacity-50 ${activeToolClass(isActive)}`;
 
   const clampCanvasPan = (pan: { x: number; y: number }, zoom = canvasZoom) => {
     const stage = stageRef.current;
@@ -190,6 +215,15 @@ export default function App() {
 
   const updateCanvasZoom = (zoom: number) => {
     const nextZoom = Math.max(0.5, Math.min(3, Number(zoom.toFixed(2))));
+    setIsDragging(false);
+    setDragStart(null);
+    setCurrentDrag(null);
+    setSelectedLayerDrag(null);
+    setLayerResizeInfo(null);
+    setBaseImageDrag(null);
+    setBaseImageResizeInfo(null);
+    setIsPanning(false);
+    setPanStart(null);
     setCanvasZoom(nextZoom);
     setCanvasPan((prev) => clampCanvasPan(prev, nextZoom));
   };
@@ -1751,16 +1785,22 @@ export default function App() {
             <div className="inline-flex items-center gap-1 rounded-xl border border-[#2d3952] bg-[#101722] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
               <button
                 type="button"
-                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-                className="grid place-items-center w-9 h-8 rounded-lg border border-transparent bg-transparent px-0 text-neutral-500 hover:text-white"
+                onClick={() => {
+                  flashTool("view");
+                  setViewMode(viewMode === "editor" ? "preview" : "editor");
+                }}
+                className={toolbarToolClass(activeActionTool === "view" || viewMode === "preview")}
                 title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
               >
                 {viewMode === "editor" ? <Eye className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
               </button>
               <button
                 type="button"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="grid place-items-center w-9 h-8 rounded-lg border border-transparent bg-transparent px-0 text-neutral-500 hover:text-white"
+                onClick={() => {
+                  flashTool("theme");
+                  setTheme(theme === "dark" ? "light" : "dark");
+                }}
+                className={toolbarToolClass(activeActionTool === "theme")}
                 title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               >
                 {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -1769,40 +1809,46 @@ export default function App() {
               <button
                 type="button"
                 title="Pointer mode"
-                onClick={() => setEditMode(null)}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(!editMode)}`}
+                onClick={() => {
+                  flashTool("pointer");
+                  setEditMode(null);
+                  setDrawingLayer(null);
+                  setIsRemovingText(false);
+                  setSelectedComponentsToRemove([]);
+                }}
+                className={toolbarToolClass((!editMode && !isRemovingText) || activeActionTool === "pointer")}
               >
                 <MousePointer2 className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 title="Face region"
-                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "face")}`}
+                onClick={() => { flashTool("face"); setEditMode("add"); setDrawingLayer("face"); }}
+                className={toolbarToolClass((editMode === "add" && drawingLayer === "face") || activeActionTool === "face")}
               >
                 <User className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 title="Text region"
-                onClick={() => { setEditMode("add"); setDrawingLayer("text"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "text")}`}
+                onClick={() => { flashTool("text-region"); setEditMode("add"); setDrawingLayer("text"); }}
+                className={toolbarToolClass((editMode === "add" && drawingLayer === "text") || activeActionTool === "text-region")}
               >
                 <FileText className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 title="Erase component"
-                onClick={() => { setEditMode("add"); setDrawingLayer("signature"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "signature")}`}
+                onClick={() => { flashTool("signature-region"); setEditMode("add"); setDrawingLayer("signature"); }}
+                className={toolbarToolClass((editMode === "add" && drawingLayer === "signature") || activeActionTool === "signature-region")}
               >
                 <Eraser className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 title="Code region"
-                onClick={() => { setEditMode("add"); setDrawingLayer("code"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all ${activeToolClass(editMode === "add" && drawingLayer === "code")}`}
+                onClick={() => { flashTool("code-region"); setEditMode("add"); setDrawingLayer("code"); }}
+                className={toolbarToolClass((editMode === "add" && drawingLayer === "code") || activeActionTool === "code-region")}
               >
                 <Code className="w-3.5 h-3.5" />
               </button>
@@ -1810,6 +1856,7 @@ export default function App() {
                 type="button"
                 title="Remove selected component"
                 onClick={() => {
+                  flashTool("remove");
                   const nextIsRemoving = !isRemovingText;
                   setIsRemovingText(nextIsRemoving);
                   if (nextIsRemoving) {
@@ -1827,7 +1874,7 @@ export default function App() {
                   }
                 }}
                 disabled={!selectedFile || !openCVLoaded}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all disabled:opacity-40 ${activeToolClass(isRemovingText)}`}
+                className={`${toolbarToolClass(isRemovingText || activeActionTool === "remove")} disabled:opacity-40`}
               >
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
@@ -1837,18 +1884,24 @@ export default function App() {
           <div className="flex flex-wrap items-center justify-end gap-1.5 lg:flex-[0_0_auto]">
             <button
               type="button"
-              onClick={handleUndo}
+              onClick={() => {
+                flashTool("undo");
+                handleUndo();
+              }}
               disabled={!canUndo}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[88px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
+              className={toolbarActionClass(activeActionTool === "undo", "min-w-[88px]")}
             >
               <ArrowLeft className="w-3 h-3" />
               Undo
             </button>
             <button
               type="button"
-              onClick={handleRedo}
+              onClick={() => {
+                flashTool("redo");
+                handleRedo();
+              }}
               disabled={!canRedo}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[88px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
+              className={toolbarActionClass(activeActionTool === "redo", "min-w-[88px]")}
             >
               <ArrowRight className="w-3 h-3" />
               Redo
@@ -1857,9 +1910,12 @@ export default function App() {
             <button
               type="button"
               title="Add overlay image"
-              onClick={openOverlayImagePicker}
+              onClick={() => {
+                flashTool("upload-overlay");
+                openOverlayImagePicker();
+              }}
               disabled={!selectedFile}
-              className="grid place-items-center w-9 h-9 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white disabled:opacity-40"
+              className={`grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 disabled:opacity-40 ${activeToolClass(activeActionTool === "upload-overlay")}`}
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
@@ -1867,8 +1923,11 @@ export default function App() {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => setShowHeaderMenu((prev) => !prev)}
-                className="grid place-items-center w-9 h-9 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
+                onClick={() => {
+                  flashTool("more");
+                  setShowHeaderMenu((prev) => !prev);
+                }}
+                className={`grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 ${activeToolClass(showHeaderMenu || activeActionTool === "more")}`}
                 title="More actions"
               >
                 <MoreHorizontal className="w-3.5 h-3.5" />
@@ -1878,45 +1937,60 @@ export default function App() {
                   <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
-                      onClick={() => addTextLayer("New Text")}
+                      onClick={() => {
+                        flashTool("menu-text");
+                        addTextLayer("New Text");
+                      }}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-text")}
                     >
                       <FileText className="w-3.5 h-3.5" />
                       Text
                     </button>
                     <button
                       type="button"
-                      onClick={() => addSignatureLayer()}
+                      onClick={() => {
+                        flashTool("menu-sign");
+                        addSignatureLayer();
+                      }}
                       disabled={!selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-sign")}
                     >
                       <Eraser className="w-3.5 h-3.5" />
                       Sign
                     </button>
                     <button
                       type="button"
-                      onClick={copyLayer}
+                      onClick={() => {
+                        flashTool("menu-copy");
+                        copyLayer();
+                      }}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-copy")}
                     >
                       <Copy className="w-3.5 h-3.5" />
                       Copy
                     </button>
                     <button
                       type="button"
-                      onClick={cutLayer}
+                      onClick={() => {
+                        flashTool("menu-cut");
+                        cutLayer();
+                      }}
                       disabled={!selectedLayer && !selectedBaseImage}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-cut")}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                       Cut
                     </button>
                     <button
                       type="button"
-                      onClick={pasteLayer}
+                      onClick={() => {
+                        flashTool("menu-paste");
+                        pasteLayer();
+                      }}
                       disabled={!clipboardLayer || !selectedFile}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-paste")}
                     >
                       <Clipboard className="w-3.5 h-3.5" />
                       Paste
@@ -1929,45 +2003,60 @@ export default function App() {
                     )}
                     <button
                       type="button"
-                      onClick={handleUndo}
+                      onClick={() => {
+                        flashTool("menu-undo");
+                        handleUndo();
+                      }}
                       disabled={!canUndo}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-undo")}
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Undo
                     </button>
                     <button
                       type="button"
-                      onClick={handleRedo}
+                      onClick={() => {
+                        flashTool("menu-redo");
+                        handleRedo();
+                      }}
                       disabled={!canRedo}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-redo")}
                     >
                       <ArrowRight className="w-3.5 h-3.5" />
                       Redo
                     </button>
                     <button
                       type="button"
-                      onClick={() => exportAsset("png")}
+                      onClick={() => {
+                        flashTool("menu-png");
+                        exportAsset("png");
+                      }}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-png" || exportFormat === "png")}
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       PNG
                     </button>
                     <button
                       type="button"
-                      onClick={() => exportAsset("jpg")}
+                      onClick={() => {
+                        flashTool("menu-jpg");
+                        exportAsset("jpg");
+                      }}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-[var(--bg-secondary)] text-[10px] font-semibold uppercase border border-neutral-700/50 text-neutral-200 hover:bg-[var(--surface-strong)] disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-jpg" || exportFormat === "jpg")}
                     >
                       <ImageIcon className="w-3.5 h-3.5" />
                       JPG
                     </button>
                     <button
                       type="button"
-                      onClick={() => exportAsset("psd")}
+                      onClick={() => {
+                        flashTool("menu-psd");
+                        exportAsset("psd");
+                      }}
                       disabled={!selectedFile || isExporting}
-                      className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-blue-600 text-[10px] font-semibold uppercase border border-blue-500 text-white hover:bg-blue-500 disabled:opacity-50"
+                      className={menuToolClass(activeActionTool === "menu-psd" || exportFormat === "psd")}
                     >
                       <Download className="w-3.5 h-3.5" />
                       PSD
@@ -1979,37 +2068,47 @@ export default function App() {
 
             <button
               type="button"
-              onClick={() => exportAsset("png")}
+              onClick={() => {
+                flashTool("png");
+                exportAsset("png");
+              }}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
+              className={toolbarActionClass(activeActionTool === "png" || exportFormat === "png")}
             >
               <ImageIcon className="w-3 h-3" />
               PNG
             </button>
             <button
               type="button"
-              onClick={() => exportAsset("jpg")}
+              onClick={() => {
+                flashTool("jpg");
+                exportAsset("jpg");
+              }}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-white/8 bg-[#191919] text-[8px] font-semibold uppercase tracking-[0.08em] text-neutral-200 disabled:opacity-40"
+              className={toolbarActionClass(activeActionTool === "jpg" || exportFormat === "jpg")}
             >
               <ImageIcon className="w-3 h-3" />
               JPG
             </button>
             <button
               type="button"
-              onClick={() => exportAsset("psd")}
+              onClick={() => {
+                flashTool("psd");
+                exportAsset("psd");
+              }}
               disabled={!selectedFile || isExporting}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[74px] h-9 px-2.5 rounded-xl border border-blue-400/20 bg-blue-600 text-[8px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_14px_30px_rgba(37,99,235,0.35)] disabled:opacity-40"
+              className={toolbarActionClass(activeActionTool === "psd" || exportFormat === "psd")}
             >
               <Download className="w-3 h-3" />
               PSD
             </button>
             <button
               onClick={() => {
+                flashTool("logout");
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className="inline-flex items-center justify-center gap-1.5 min-w-[100px] h-9 px-2.5 rounded-xl border border-red-500/20 bg-[#1a0909] text-[8px] font-semibold uppercase tracking-[0.08em] text-red-300 hover:bg-red-950/40 hover:text-red-100"
+              className={`inline-flex items-center justify-center gap-1.5 min-w-[100px] h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all ${activeActionTool === "logout" ? activeToolClass(true) : "border-red-500/20 bg-[#1a0909] text-red-300 hover:bg-red-950/40 hover:text-red-100"}`}
               title="Logout"
             >
               <LogOut className="w-3 h-3" />
@@ -2226,7 +2325,9 @@ export default function App() {
               </div>
               <div
                 className="px-3 py-1.5 bg-black/80 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)] pointer-events-auto"
+                onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
                 onWheel={(e) => e.stopPropagation()}
               >
@@ -2246,7 +2347,13 @@ export default function App() {
               </div>
               {(canvasPan.x !== 0 || canvasPan.y !== 0) && (
                 <button
-                  onClick={() => setCanvasPan({ x: 0, y: 0 })}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCanvasPan({ x: 0, y: 0 });
+                  }}
                   className="px-3 py-1 bg-black/75 border border-white/8 hover:border-white/14 rounded-full text-[8px] font-semibold text-neutral-300 uppercase tracking-[0.25em] transition-colors hover:text-neutral-200 pointer-events-auto"
                   title="Reset pan to center"
                 >
