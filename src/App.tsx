@@ -114,6 +114,7 @@ export default function App() {
   const [clipboardIsBaseImage, setClipboardIsBaseImage] = useState(false);
   const [selectedBaseImage, setSelectedBaseImage] = useState(false);
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
+  const canvasDimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   const fontFamilies = [
     { label: "Inter", value: "Inter, system-ui, sans-serif" },
@@ -658,6 +659,9 @@ export default function App() {
         canvas.width = targetWidth;
         canvas.height = targetWidth / ratio;
 
+        // Store actual canvas dimensions for accurate coordinate calculations
+        canvasDimensionsRef.current = { width: canvas.width, height: canvas.height };
+
         const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
         const cropWidth = fileCrop.width || 1;
         const cropHeight = fileCrop.height || 1;
@@ -892,7 +896,11 @@ export default function App() {
     const x = (e.clientX - rect.left) / rect.width;
     const y = (e.clientY - rect.top) / rect.height;
 
-    const clickedLayer = getTopLayerAtPoint(x * canvasLayout.width, y * canvasLayout.height);
+    // Use actual canvas dimensions from ref to ensure accurate coordinate calculations
+    const actualWidth = canvasDimensionsRef.current.width || rect.width;
+    const actualHeight = canvasDimensionsRef.current.height || rect.height;
+
+    const clickedLayer = getTopLayerAtPoint(x * actualWidth, y * actualHeight);
     if (clickedLayer) {
       setSelectedBaseImage(false);
       if (selectedLayerId !== clickedLayer.id) {
@@ -901,7 +909,7 @@ export default function App() {
 
       // Allow resizing for image, text, and signature layers
       if (!clickedLayer.locked && (clickedLayer.type === "image" || clickedLayer.type === "text" || clickedLayer.type === "signature")) {
-        const handle = getResizeHandleAtPoint(clickedLayer, x * canvasLayout.width, y * canvasLayout.height);
+        const handle = getResizeHandleAtPoint(clickedLayer, x * actualWidth, y * actualHeight);
         if (handle) {
           const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
           pushSnapshot();
@@ -959,6 +967,10 @@ export default function App() {
     const y = (e.clientY - rect.top) / rect.height;
     setCurrentDrag({ x, y });
 
+    // Use actual canvas dimensions for consistent calculations
+    const actualWidth = canvasDimensionsRef.current.width || rect.width;
+    const actualHeight = canvasDimensionsRef.current.height || rect.height;
+
     if (layerResizeInfo && selectedFile) {
       const fileCrop = layerResizeInfo.crop || selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
       const cropWidth = fileCrop.width || 1;
@@ -1000,8 +1012,8 @@ export default function App() {
 
     if (selectedLayerDrag && selectedFile) {
       const moveDistancePx = Math.hypot(
-        (x - selectedLayerDrag.origin.x) * canvasLayout.width,
-        (y - selectedLayerDrag.origin.y) * canvasLayout.height
+        (x - selectedLayerDrag.origin.x) * actualWidth,
+        (y - selectedLayerDrag.origin.y) * actualHeight
       );
       if (!dragMoved && moveDistancePx < 6) {
         return;
