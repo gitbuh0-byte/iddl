@@ -1509,32 +1509,57 @@ export default function App() {
       ) : (
         <div data-theme={theme} className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-blue-500/30 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="border-b border-white/6 bg-[#0a0a0a]/95 backdrop-blur-md z-50 shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
-        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
+      <header className="border-b border-white/6 bg-[#08090d]/95 backdrop-blur-md z-50 shrink-0 shadow-[0_8px_30px_rgba(0,0,0,0.35)]">
+        <div className="max-w-[1920px] mx-auto px-4 sm:px-6 py-3 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0 lg:flex-[0_0_auto]">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 border border-blue-300/20 flex items-center justify-center shadow-[0_10px_24px_rgba(37,99,235,0.35)]">
               <ImageIcon className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
               <span className="font-semibold text-[13px] tracking-tight block leading-none text-white">Photo Studio</span>
-              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.38em] font-mono">AI-powered editor v1.0</span>
+              <span className="text-[8px] text-neutral-500 uppercase tracking-[0.38em] font-mono">AI Editor</span>
             </div>
             <div className="hidden md:block h-8 w-px bg-white/8" />
-            <div className="hidden md:inline-flex items-center gap-2 text-[8px] uppercase tracking-[0.24em] text-neutral-500">
+            <div className="hidden md:inline-flex items-center gap-2 text-[8px] uppercase tracking-[0.24em] text-neutral-400">
               <span className={`inline-flex w-2 h-2 rounded-full ${openCVLoaded ? "bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.8)]" : "bg-amber-400"}`}></span>
               <span>{openCVLoaded ? "OpenCV Ready" : "Loading"}</span>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <div className="inline-flex items-center gap-1 rounded-xl border border-white/8 bg-[#101010] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+          <div className="flex items-center justify-center lg:flex-1">
+            <div className="inline-flex items-center gap-1 rounded-xl border border-[#2d3952] bg-[#101722] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
+              <button
+                type="button"
+                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
+                className="grid place-items-center w-9 h-8 rounded-lg border border-transparent bg-transparent px-0 text-neutral-500 hover:text-white"
+                title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
+              >
+                {viewMode === "editor" ? <Eye className="w-3.5 h-3.5" /> : <Layers className="w-3.5 h-3.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="grid place-items-center w-9 h-8 rounded-lg border border-transparent bg-transparent px-0 text-neutral-500 hover:text-white"
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+              <div className="mx-1 h-5 w-px bg-white/8" />
               <button
                 type="button"
                 title="Pointer mode"
                 onClick={() => setEditMode(null)}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${!editMode ? "border-white/5 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${!editMode ? "border-[#31415c] bg-[#182233] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
                 <MousePointer2 className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Face region"
+                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
+                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "face" ? "border-[#31415c] bg-[#182233] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
+              >
+                <User className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
@@ -1560,15 +1585,6 @@ export default function App() {
               >
                 <Code className="w-3.5 h-3.5" />
               </button>
-              <div className="mx-1 h-5 w-px bg-white/8" />
-              <button
-                type="button"
-                title="Face region"
-                onClick={() => { setEditMode("add"); setDrawingLayer("face"); }}
-                className={`grid place-items-center w-9 h-8 rounded-lg border px-0 ${editMode === "add" && drawingLayer === "face" ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
-              >
-                <User className="w-3.5 h-3.5" />
-              </button>
               <button
                 type="button"
                 title="Remove text"
@@ -1579,28 +1595,9 @@ export default function App() {
                 <Wand2 className="w-3.5 h-3.5" />
               </button>
             </div>
-
-            <div className="hidden lg:flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMode(viewMode === "editor" ? "preview" : "editor")}
-                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
-                title={viewMode === "editor" ? "Switch to preview" : "Switch to editor"}
-              >
-                {viewMode === "editor" ? <Eye className="w-4 h-4" /> : <Layers className="w-4 h-4" />}
-              </button>
-              <button
-                type="button"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="grid place-items-center w-10 h-10 rounded-xl border border-white/8 bg-[#111111] text-neutral-300 hover:text-white"
-                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {theme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-              </button>
-            </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2 lg:flex-[0_0_auto]">
             <button
               type="button"
               onClick={handleUndo}
@@ -1788,10 +1785,10 @@ export default function App() {
       {/* Main UI */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden bg-[#060606]">
         {/* Left Sidebar: File Browser - Hidden on small screens, toggle on md */}
-        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[286px] border-r border-white/6 bg-[#0b0b0b] shrink-0 max-h-[30vh] lg:max-h-none`}>
+        <div className={`${viewMode === "preview" ? "hidden" : "flex flex-col"} w-full lg:w-[280px] border-r border-white/6 bg-[#131b2d] shrink-0 max-h-[30vh] lg:max-h-none`}>
           <div className="px-4 py-4 border-b border-white/6 flex items-center justify-between">
-            <span className="text-[10px] uppercase tracking-[0.35em] text-neutral-500 font-medium">Photo Library</span>
-            <span className="text-[9px] text-neutral-400 border border-white/8 rounded-md px-2 py-0.5 bg-[#151515]">{files.length}/4</span>
+            <span className="text-[9px] uppercase tracking-[0.35em] text-neutral-400 font-medium">Library</span>
+            <span className="text-[9px] text-neutral-300 border border-white/8 rounded-md px-2 py-0.5 bg-[#151d2f]">{files.length}/4</span>
           </div>
           
           <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -1799,7 +1796,7 @@ export default function App() {
               <div 
                 key={file.id}
                 onClick={() => setSelectedFileId(file.id)}
-                className={`group relative aspect-[4/3] min-h-[152px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101010] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/8 hover:border-white/18"}`}
+                className={`group relative aspect-[4/3] min-h-[152px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101722] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/10 hover:border-white/20"}`}
               >
                 <img
                   src={file.originalUrl}
@@ -1838,9 +1835,9 @@ export default function App() {
             {files.length < 4 && (
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full aspect-[4/3] min-h-[152px] rounded-2xl border border-dashed border-white/10 bg-[#0f0f0f] flex flex-col items-center justify-center gap-3 text-neutral-500 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.28em]"
+                className="w-full aspect-[4/3] min-h-[152px] rounded-2xl border border-dashed border-white/10 bg-[#101722] flex flex-col items-center justify-center gap-3 text-neutral-400 hover:text-blue-300 hover:border-blue-500/30 hover:bg-blue-500/10 transition-all text-[8px] font-semibold uppercase tracking-[0.28em]"
               >
-                <div className="p-4 rounded-3xl bg-[#171717] border border-white/5">
+                <div className="p-4 rounded-3xl bg-[#1a2134] border border-white/5">
                   <Plus className="w-5 h-5" />
                 </div>
                 <span className="text-[9px] font-semibold">Upload</span>
@@ -1981,7 +1978,30 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[308px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#0b0b0b] p-4 space-y-4 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[306px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-4 space-y-4 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none"}>
+          <div className="rounded-[18px] bg-[#121a2b] px-4 py-3 border border-white/6">
+            <input
+              type="range"
+              min="-10"
+              max="10"
+              value={selectedFile?.adjustments.brightness ?? 0}
+              onChange={(e) => {
+                if (!selectedFile) return;
+                updateFilesWithHistory(prev => prev.map(f =>
+                  f.id === selectedFileId
+                    ? { ...f, adjustments: { ...f.adjustments, brightness: Number(e.target.value) } }
+                    : f
+                ));
+              }}
+              className="w-full h-1.5 bg-neutral-200/80 rounded-full accent-blue-500"
+            />
+          </div>
+
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] font-semibold text-white tracking-tight">Detected Layers</span>
+            <span className="text-[8px] text-neutral-500 font-mono">#{selectedFile?.layers.length || 0}</span>
+          </div>
+
           {/* Adjustments */}
           {selectedFile && (
             <div className="space-y-3 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-4">
@@ -2129,10 +2149,6 @@ export default function App() {
 
           {/* Layers List */}
           <div className="space-y-3">
-            <h4 className="text-[9px] font-semibold text-neutral-500 uppercase tracking-[0.35em] flex items-center justify-between">
-              <span>Detected Layers</span>
-              <span className="text-[9px] text-neutral-600 font-mono">#{selectedFile?.layers.length || 0}</span>
-            </h4>
             <div className="space-y-2 max-h-[40vh] overflow-y-auto pr-2 rounded-[22px] border border-white/6 bg-[#0d0d0d] p-3">
               {selectedFile?.layers.length === 0 ? (
                 <div className="p-8 rounded-2xl bg-[#111111] border border-dashed border-white/10 flex flex-col items-center justify-center text-center">
