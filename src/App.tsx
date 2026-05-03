@@ -526,7 +526,11 @@ export default function App() {
       };
       
       setFiles((prev: ManagedFile[]) => [...prev, newFile]);
-      if (!selectedFileId) setSelectedFileId(id);
+      if (!selectedFileId) {
+        setSelectedFileId(id);
+        setSelectedLayerId(null);
+        setSelectedBaseImage(true);
+      }
 
       // Auto-analyze image
       analyzeImage(f, id);
@@ -657,8 +661,9 @@ export default function App() {
             : f
         ));
 
-        if (!selectedLayerId && layers.length > 0) {
-          setSelectedLayerId(layers[0].id);
+        if (!selectedFileId || selectedFileId === fileId) {
+          setSelectedLayerId(null);
+          setSelectedBaseImage(true);
         }
       }
     } catch (error) {
@@ -989,6 +994,29 @@ export default function App() {
     // Use actual canvas dimensions from ref to ensure accurate coordinate calculations
     const actualWidth = canvasDimensionsRef.current.width || rect.width;
     const actualHeight = canvasDimensionsRef.current.height || rect.height;
+
+    if (selectedBaseImage && !selectedLayer && !editMode) {
+      const handle = getBaseCropHandleAtPoint(x * actualWidth, y * actualHeight);
+      const fileCrop = selectedFile.crop || { x: 0, y: 0, width: 1, height: 1 };
+
+      if (handle) {
+        pushSnapshot();
+        clearRedoStack();
+        setBaseImageResizeInfo({
+          anchor: handle,
+          start: { x, y },
+          crop: fileCrop,
+        });
+        setIsDragging(true);
+      } else {
+        setIsPanning(true);
+        setPanStart({ x: e.clientX, y: e.clientY });
+        setIsDragging(false);
+      }
+
+      setDragMoved(false);
+      return;
+    }
 
     const clickedLayer = getTopLayerAtPoint(x * actualWidth, y * actualHeight);
     
@@ -1969,7 +1997,11 @@ export default function App() {
             {files.map(file => (
               <div 
                 key={file.id}
-                onClick={() => setSelectedFileId(file.id)}
+                onClick={() => {
+                  setSelectedFileId(file.id);
+                  setSelectedLayerId(null);
+                  setSelectedBaseImage(true);
+                }}
                 className={`group relative aspect-[4/3] min-h-[128px] rounded-2xl overflow-hidden cursor-pointer border bg-[#101722] transition-all ${selectedFileId === file.id ? "border-blue-500 ring-2 ring-blue-500/30 shadow-[0_0_0_1px_rgba(59,130,246,0.35)]" : "border-white/10 hover:border-white/20"}`}
               >
                 <img
@@ -2172,7 +2204,10 @@ export default function App() {
         </div>
 
         {/* Right Sidebar: Layers & Adjustments - Mobile optimized */}
-        <div className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 space-y-3 shrink-0 overflow-y-auto max-h-[36vh] lg:max-h-none min-h-0 h-full"}>
+        <div
+          className={viewMode === "preview" ? "hidden" : "w-full lg:w-[284px] border-t lg:border-t-0 lg:border-l border-white/6 bg-[#131b2d] p-3 pr-2 pb-16 space-y-3 shrink-0 overflow-y-scroll overscroll-contain touch-pan-y max-h-[36vh] lg:max-h-none min-h-0 h-full"}
+          style={{ scrollbarGutter: "stable" }}
+        >
           <div className="rounded-[16px] bg-[#121a2b] px-3 py-2.5 border border-white/6">
             <input
               type="range"
