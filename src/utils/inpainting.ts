@@ -507,9 +507,9 @@ export function loadOpenCV(): Promise<void> {
 
     console.log('Loading OpenCV.js...');
 
-    // Try loading from CDN first
+    // Load the bundled app copy first so OpenCV works from the PWA cache offline.
     const script = document.createElement('script');
-    script.src = 'https://docs.opencv.org/4.5.5/opencv.js';
+    script.src = '/opencv.js';
     script.async = true;
 
     let checkAttempts = 0;
@@ -528,7 +528,7 @@ export function loadOpenCV(): Promise<void> {
 
         // Try alternative CDN
         const altScript = document.createElement('script');
-        altScript.src = 'https://cdn.jsdelivr.net/npm/opencv.js@4.5.5/opencv.js';
+        altScript.src = '/opencv.js';
         altScript.async = true;
 
         let altAttempts = 0;
@@ -573,7 +573,7 @@ export function loadOpenCV(): Promise<void> {
 
       // Try alternative immediately
       const altScript = document.createElement('script');
-      altScript.src = 'https://cdn.jsdelivr.net/npm/opencv.js@4.5.5/opencv.js';
+      altScript.src = '/opencv.js';
       altScript.async = true;
 
       let altAttempts = 0;

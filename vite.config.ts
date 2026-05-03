@@ -12,7 +12,26 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.svg', 'pwa-icon.svg'],
+        includeAssets: ['favicon.svg', 'pwa-icon.svg', 'opencv.js', 'haarcascade_frontalface_default.xml'],
+        workbox: {
+          cleanupOutdatedCaches: true,
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,json,webmanifest,xml}'],
+          maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
+          navigateFallback: '/index.html',
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.origin === self.location.origin,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'photo-studio-local-assets',
+                expiration: {
+                  maxEntries: 80,
+                  maxAgeSeconds: 60 * 60 * 24 * 30,
+                },
+              },
+            },
+          ],
+        },
         manifest: {
           name: 'Photo Studio',
           short_name: 'Studio',
