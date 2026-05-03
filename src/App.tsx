@@ -127,6 +127,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const activeActionTimerRef = useRef<number | null>(null);
+  const suppressCanvasSelectionUntilRef = useRef(0);
 
   const selectedFile = files.find(f => f.id === selectedFileId);
   const selectedLayer = selectedFile?.layers.find(l => l.id === selectedLayerId);
@@ -167,8 +168,8 @@ export default function App() {
   };
 
   const activeToolClass = (isActive: boolean) => {
-    if (!isActive) return "border-white/8 bg-[#111111] text-neutral-300 hover:border-blue-400/40 hover:text-white";
-    return "scale-[1.03] border-blue-300 bg-blue-500/45 text-white ring-2 ring-blue-400/80 shadow-[0_0_0_1px_rgba(147,197,253,0.7),0_0_36px_rgba(59,130,246,0.95),0_0_70px_rgba(37,99,235,0.45),inset_0_1px_0_rgba(255,255,255,0.22)]";
+    if (!isActive) return "tool-glow-idle";
+    return "tool-glow-active";
   };
 
   const flashTool = (tool: string) => {
@@ -186,13 +187,13 @@ export default function App() {
   }, []);
 
   const toolbarToolClass = (isActive: boolean) =>
-    `grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all duration-200 ${activeToolClass(isActive)}`;
+    `relative grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all duration-200 ${activeToolClass(isActive)}`;
 
   const toolbarActionClass = (isActive: boolean, minWidth = "min-w-[74px]") =>
-    `inline-flex items-center justify-center gap-1.5 ${minWidth} h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all duration-200 disabled:opacity-40 ${activeToolClass(isActive)}`;
+    `relative inline-flex items-center justify-center gap-1.5 ${minWidth} h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all duration-200 disabled:opacity-40 ${activeToolClass(isActive)}`;
 
   const menuToolClass = (isActive: boolean) =>
-    `flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl text-[10px] font-semibold uppercase border transition-all duration-200 disabled:opacity-50 ${activeToolClass(isActive)}`;
+    `relative flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-xl text-[10px] font-semibold uppercase border transition-all duration-200 disabled:opacity-50 ${activeToolClass(isActive)}`;
 
   const clampCanvasPan = (pan: { x: number; y: number }, zoom = canvasZoom) => {
     const stage = stageRef.current;
@@ -215,6 +216,7 @@ export default function App() {
 
   const updateCanvasZoom = (zoom: number) => {
     const nextZoom = Math.max(0.5, Math.min(3, Number(zoom.toFixed(2))));
+    suppressCanvasSelectionUntilRef.current = Date.now() + 450;
     setIsDragging(false);
     setDragStart(null);
     setCurrentDrag(null);
@@ -224,6 +226,8 @@ export default function App() {
     setBaseImageResizeInfo(null);
     setIsPanning(false);
     setPanStart(null);
+    setSelectedLayerId(null);
+    setSelectedBaseImage(false);
     setCanvasZoom(nextZoom);
     setCanvasPan((prev) => clampCanvasPan(prev, nextZoom));
   };
@@ -1024,6 +1028,10 @@ export default function App() {
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (Date.now() < suppressCanvasSelectionUntilRef.current) {
+      return;
+    }
     
     // Enable panning with middle mouse button or when right-clicking
     if (e.button === 1 || e.button === 2) { // middle or right mouse button
@@ -1920,7 +1928,7 @@ export default function App() {
                 openOverlayImagePicker();
               }}
               disabled={!selectedFile}
-              className={`grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 disabled:opacity-40 ${activeToolClass(activeActionTool === "upload-overlay")}`}
+              className={`relative grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 disabled:opacity-40 ${activeToolClass(activeActionTool === "upload-overlay")}`}
             >
               <Upload className="w-3.5 h-3.5" />
             </button>
@@ -1932,7 +1940,7 @@ export default function App() {
                   flashTool("more");
                   setShowHeaderMenu((prev) => !prev);
                 }}
-                className={`grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 ${activeToolClass(showHeaderMenu || activeActionTool === "more")}`}
+                className={`relative grid place-items-center w-9 h-9 rounded-xl border transition-all duration-200 ${activeToolClass(showHeaderMenu || activeActionTool === "more")}`}
                 title="More actions"
               >
                 <MoreHorizontal className="w-3.5 h-3.5" />
@@ -2113,7 +2121,7 @@ export default function App() {
                 sessionStorage.removeItem("isAuthenticated");
                 setIsAuthenticated(false);
               }}
-              className={`inline-flex items-center justify-center gap-1.5 min-w-[100px] h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all ${activeActionTool === "logout" ? activeToolClass(true) : "border-red-500/20 bg-[#1a0909] text-red-300 hover:bg-red-950/40 hover:text-red-100"}`}
+              className={`relative inline-flex items-center justify-center gap-1.5 min-w-[100px] h-9 px-2.5 rounded-xl border text-[8px] font-semibold uppercase tracking-[0.08em] transition-all ${activeActionTool === "logout" ? activeToolClass(true) : "border-red-500/20 bg-[#1a0909] text-red-300 hover:bg-red-950/40 hover:text-red-100"}`}
               title="Logout"
             >
               <LogOut className="w-3 h-3" />

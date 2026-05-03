@@ -20,10 +20,35 @@ export default defineConfig(({mode}) => {
           navigateFallback: '/index.html',
           runtimeCaching: [
             {
-              urlPattern: ({ url }) => url.origin === self.location.origin,
+              urlPattern: ({ request }) => request.mode === 'navigate',
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'photo-studio-pages',
+                networkTimeoutSeconds: 3,
+                expiration: {
+                  maxEntries: 12,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+              },
+            },
+            {
+              urlPattern: ({ url, request }) =>
+                url.origin === self.location.origin && ['script', 'style', 'worker'].includes(request.destination),
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'photo-studio-code-assets',
+                expiration: {
+                  maxEntries: 40,
+                  maxAgeSeconds: 60 * 60 * 24 * 7,
+                },
+              },
+            },
+            {
+              urlPattern: ({ url, request }) =>
+                url.origin === self.location.origin && ['image', 'font'].includes(request.destination),
               handler: 'CacheFirst',
               options: {
-                cacheName: 'photo-studio-local-assets',
+                cacheName: 'photo-studio-static-assets',
                 expiration: {
                   maxEntries: 80,
                   maxAgeSeconds: 60 * 60 * 24 * 30,
