@@ -83,6 +83,7 @@ export default function App() {
   const [drawingLayer, setDrawingLayer] = useState<"face" | "text" | "signature" | "code" | null>(null);
   const [canvasPan, setCanvasPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [canvasZoom, setCanvasZoom] = useState(1);
+  const [isZooming, setIsZooming] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
   const [selectedLayerDrag, setSelectedLayerDrag] = useState<{
@@ -127,6 +128,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const activeActionTimerRef = useRef<number | null>(null);
+  const zoomInteractionTimerRef = useRef<number | null>(null);
   const suppressCanvasSelectionUntilRef = useRef(0);
 
   const selectedFile = files.find(f => f.id === selectedFileId);
@@ -183,8 +185,26 @@ export default function App() {
   useEffect(() => {
     return () => {
       if (activeActionTimerRef.current) window.clearTimeout(activeActionTimerRef.current);
+      if (zoomInteractionTimerRef.current) window.clearTimeout(zoomInteractionTimerRef.current);
     };
   }, []);
+
+  const keepZoomInteractionActive = () => {
+    suppressCanvasSelectionUntilRef.current = Date.now() + 600;
+    setIsZooming(true);
+    if (zoomInteractionTimerRef.current) window.clearTimeout(zoomInteractionTimerRef.current);
+    zoomInteractionTimerRef.current = window.setTimeout(() => {
+      setIsZooming(false);
+    }, 260);
+  };
+
+  const finishZoomInteraction = () => {
+    suppressCanvasSelectionUntilRef.current = Date.now() + 250;
+    if (zoomInteractionTimerRef.current) window.clearTimeout(zoomInteractionTimerRef.current);
+    zoomInteractionTimerRef.current = window.setTimeout(() => {
+      setIsZooming(false);
+    }, 120);
+  };
 
   const toolbarToolClass = (isActive: boolean) =>
     `relative grid place-items-center w-9 h-8 rounded-lg border px-0 transition-all duration-200 ${activeToolClass(isActive)}`;
@@ -216,7 +236,7 @@ export default function App() {
 
   const updateCanvasZoom = (zoom: number) => {
     const nextZoom = Math.max(0.5, Math.min(3, Number(zoom.toFixed(2))));
-    suppressCanvasSelectionUntilRef.current = Date.now() + 450;
+    keepZoomInteractionActive();
     setIsDragging(false);
     setDragStart(null);
     setCurrentDrag(null);
@@ -226,8 +246,6 @@ export default function App() {
     setBaseImageResizeInfo(null);
     setIsPanning(false);
     setPanStart(null);
-    setSelectedLayerId(null);
-    setSelectedBaseImage(false);
     setCanvasZoom(nextZoom);
     setCanvasPan((prev) => clampCanvasPan(prev, nextZoom));
   };
@@ -882,7 +900,7 @@ export default function App() {
             return;
           }
 
-          const shouldDrawDetectionMarker = isRemovingText && selectedComponentsToRemove.includes(layer.id);
+          const shouldDrawDetectionMarker = !isZooming && isRemovingText && selectedComponentsToRemove.includes(layer.id);
           if (!shouldDrawDetectionMarker) {
             return;
           }
@@ -922,7 +940,7 @@ export default function App() {
         });
 
         // Draw new layer being created
-        if (selectedBaseImage && !selectedLayer) {
+        if (!isZooming && selectedBaseImage && !selectedLayer) {
           ctx.save();
           ctx.strokeStyle = "rgba(255,255,255,0.8)";
           ctx.lineWidth = 2;
@@ -931,7 +949,7 @@ export default function App() {
           ctx.restore();
         }
 
-        if (isDragging && dragStart && currentDrag && drawingLayer) {
+        if (!isZooming && isDragging && dragStart && currentDrag && drawingLayer) {
           ctx.globalAlpha = 0.5;
           const fillColors: Record<string, string> = {
             face: "rgba(59, 130, 246, 0.3)",
@@ -971,7 +989,7 @@ export default function App() {
     };
 
     drawCanvas();
-  }, [selectedFile, selectedLayer, selectedBaseImage, isDragging, dragStart, currentDrag, drawingLayer, isRemovingText, selectedComponentsToRemove]);
+  }, [selectedFile, selectedLayer, selectedBaseImage, isDragging, dragStart, currentDrag, drawingLayer, isRemovingText, selectedComponentsToRemove, isZooming]);
 
   // Load OpenCV for text inpainting
   useEffect(() => {
@@ -1008,9 +1026,19 @@ export default function App() {
 
   useEffect(() => {
     const updateLayout = () => {
-      if (!canvasRef.current) return;
-      const rect = canvasRef.current.getBoundingClientRect();
-      setCanvasLayout({ width: rect.width, height: rect.height });
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      // CSS transforms affect getBoundingClientRect(), which would double-scale selection frames.
+      const width = canvas.offsetWidth || canvas.clientWidth || canvasDimensionsRef.current.width;
+      const height = canvas.offsetHeight || canvas.clientHeight || canvasDimensionsRef.current.height;
+      if (!width || !height) return;
+
+      setCanvasLayout((prev) =>
+        Math.abs(prev.width - width) < 0.5 && Math.abs(prev.height - height) < 0.5
+          ? prev
+          : { width, height }
+      );
     };
 
     updateLayout();
@@ -1029,7 +1057,7 @@ export default function App() {
     e.preventDefault();
     e.stopPropagation();
 
-    if (Date.now() < suppressCanvasSelectionUntilRef.current) {
+    if (isZooming || Date.now() < suppressCanvasSelectionUntilRef.current) {
       return;
     }
     
@@ -1165,6 +1193,8 @@ export default function App() {
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+
+    if (isZooming) return;
     
     // Handle canvas panning
     if (isPanning && panStart) {
@@ -1339,6 +1369,19 @@ export default function App() {
   };
 
   const handleMouseUp = () => {
+    if (isZooming) {
+      setIsDragging(false);
+      setDragStart(null);
+      setCurrentDrag(null);
+      setSelectedLayerDrag(null);
+      setLayerResizeInfo(null);
+      setBaseImageDrag(null);
+      setBaseImageResizeInfo(null);
+      setIsPanning(false);
+      setPanStart(null);
+      return;
+    }
+
     if (isPanning) {
       setIsPanning(false);
       setPanStart(null);
@@ -2223,7 +2266,7 @@ export default function App() {
                 style={{ touchAction: "none", cursor: isPanning ? "grabbing" : editMode ? "crosshair" : "grab" }}
                 className="w-full block h-auto"
               />
-              {selectedLayer && isCanvasEditableLayer(selectedLayer) && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
+              {!isZooming && selectedLayer && isCanvasEditableLayer(selectedLayer) && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
                 const rect = getLayerDisplayRect(selectedLayer);
                 if (!rect) return null;
                 const handles = [
@@ -2249,7 +2292,7 @@ export default function App() {
                   </div>
                 );
               })()}
-              {selectedBaseImage && !selectedLayer && canvasLayout.width > 0 && canvasLayout.height > 0 && (
+              {!isZooming && selectedBaseImage && !selectedLayer && canvasLayout.width > 0 && canvasLayout.height > 0 && (
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="absolute inset-0 border border-dashed border-white/70 rounded-[28px]" />
                   {[
@@ -2338,7 +2381,18 @@ export default function App() {
               </div>
               <div
                 className="px-3 py-1.5 bg-black/80 border border-white/8 rounded-full flex items-center gap-2 shadow-[0_8px_24px_rgba(0,0,0,0.35)] pointer-events-auto"
-                onPointerDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  keepZoomInteractionActive();
+                }}
+                onPointerUp={(e) => {
+                  e.stopPropagation();
+                  finishZoomInteraction();
+                }}
+                onPointerCancel={(e) => {
+                  e.stopPropagation();
+                  finishZoomInteraction();
+                }}
                 onMouseDown={(e) => e.stopPropagation()}
                 onMouseUp={(e) => e.stopPropagation()}
                 onClick={(e) => e.stopPropagation()}
@@ -2354,6 +2408,18 @@ export default function App() {
                   step="5"
                   value={Math.round(canvasZoom * 100)}
                   onChange={(e) => updateCanvasZoom(Number(e.target.value) / 100)}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    keepZoomInteractionActive();
+                  }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    finishZoomInteraction();
+                  }}
+                  onPointerCancel={(e) => {
+                    e.stopPropagation();
+                    finishZoomInteraction();
+                  }}
                   className="w-28 h-1 accent-blue-500 cursor-pointer"
                   aria-label="Canvas zoom"
                 />
