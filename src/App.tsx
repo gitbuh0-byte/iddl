@@ -1359,6 +1359,9 @@ export default function App() {
           : f
       ));
       setSelectedLayerId(newLayer.id);
+      if (isRemovingText && newLayer.type === "text") {
+        setSelectedTextsToRemove((prev) => prev.includes(newLayer.id) ? prev : [...prev, newLayer.id]);
+      }
     }
 
     setIsDragging(false);
@@ -1790,7 +1793,20 @@ export default function App() {
               <button
                 type="button"
                 title="Remove text"
-                onClick={() => setIsRemovingText(!isRemovingText)}
+                onClick={() => {
+                  const nextIsRemoving = !isRemovingText;
+                  setIsRemovingText(nextIsRemoving);
+                  setSelectedTextsToRemove([]);
+                  if (nextIsRemoving) {
+                    setEditMode("add");
+                    setDrawingLayer("text");
+                    setSelectedLayerId(null);
+                    setSelectedBaseImage(false);
+                  } else {
+                    setEditMode(null);
+                    setDrawingLayer(null);
+                  }
+                }}
                 disabled={!selectedFile || !openCVLoaded}
                 className={`grid place-items-center w-9 h-8 rounded-lg border px-0 disabled:opacity-40 ${isRemovingText ? "border-white/8 bg-[#1b1b1b] text-white" : "border-transparent bg-transparent text-neutral-500 hover:text-white"}`}
               >
@@ -2778,11 +2794,11 @@ export default function App() {
               </h4>
               
               <div className="space-y-3">
-                <p className="text-[9px] text-amber-700">Select text layers to remove and fill with background:</p>
+                <p className="text-[9px] text-amber-700">Drag over text on the canvas, or select detected text layers to remove and fill with background:</p>
                 
                 <div className="space-y-2 max-h-[25vh] overflow-y-auto">
                   {selectedFile.layers.filter(l => l.type === "text").length === 0 ? (
-                    <p className="text-[8px] text-neutral-600 italic">No text layers found</p>
+                    <p className="text-[8px] text-neutral-600 italic">No text layers yet. Drag a box over the text area on the image.</p>
                   ) : (
                     selectedFile.layers
                       .filter(l => l.type === "text")
@@ -2831,6 +2847,8 @@ export default function App() {
                     onClick={() => {
                       setIsRemovingText(false);
                       setSelectedTextsToRemove([]);
+                      setEditMode(null);
+                      setDrawingLayer(null);
                     }}
                     className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-[9px] font-bold uppercase transition-all border bg-neutral-800/50 border-neutral-700 text-neutral-400 hover:text-neutral-300"
                   >
