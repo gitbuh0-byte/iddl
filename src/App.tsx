@@ -1799,8 +1799,8 @@ export default function App() {
       pdf417: { width: 0.46, height: 0.1 },
       code128: { width: 0.42, height: 0.055 },
       upc: { width: 0.42, height: 0.12 },
-      postnet: { width: 0.09, height: 0.52 },
-      imb: { width: 0.09, height: 0.52 },
+      postnet: { width: 0.34, height: 0.06 },
+      imb: { width: 0.46, height: 0.14 },
     };
     const newLayer: Layer = {
       id: `barcode-${Date.now()}`,
@@ -1834,6 +1834,154 @@ export default function App() {
     setDlCopiedIndex({ index, field });
     setTimeout(() => setDlCopiedIndex(null), 2000);
   };
+
+  const duplicateSelectedLayer = () => {
+    if (!selectedLayer || !selectedFileId) return;
+    const duplicatedLayer: Layer = {
+      ...JSON.parse(JSON.stringify(selectedLayer)),
+      id: `${selectedLayer.id}-copy-${Date.now()}`,
+      name: `${selectedLayer.name} Copy`,
+      x: Math.min(0.9, selectedLayer.x + 0.035),
+      y: Math.min(0.9, selectedLayer.y + 0.035),
+    };
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((file) =>
+      file.id === selectedFileId
+        ? { ...file, layers: [...file.layers, duplicatedLayer] }
+        : file
+    ));
+    setSelectedLayerId(duplicatedLayer.id);
+    setSelectedBaseImage(false);
+  };
+
+  const resizeSelectedLayerBy = (scale: number) => {
+    if (!selectedLayer) return;
+    updateSelectedLayer({
+      width: Math.max(0.025, Math.min(1, selectedLayer.width * scale)),
+      height: Math.max(0.025, Math.min(1, selectedLayer.height * scale)),
+      fontSize: selectedLayer.fontSize
+        ? Math.max(8, Math.min(220, Math.round(selectedLayer.fontSize * scale)))
+        : selectedLayer.fontSize,
+    });
+  };
+
+  const rotateSelectedLayerBy = (delta: number) => {
+    if (!selectedLayer) return;
+    updateSelectedLayer({ rotation: Math.max(-180, Math.min(180, (selectedLayer.rotation || 0) + delta)) });
+  };
+
+  const cropSelectedImageBy = (delta: number) => {
+    if (!selectedLayer || selectedLayer.type !== "image") return;
+    const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+    const nextWidth = Math.max(0.1, Math.min(1, crop.width + delta));
+    const nextHeight = Math.max(0.1, Math.min(1, crop.height + delta));
+    updateSelectedLayer({
+      crop: {
+        ...crop,
+        x: Math.max(0, Math.min(1 - nextWidth, crop.x + (crop.width - nextWidth) / 2)),
+        y: Math.max(0, Math.min(1 - nextHeight, crop.y + (crop.height - nextHeight) / 2)),
+        width: nextWidth,
+        height: nextHeight,
+      },
+    });
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+      if (isTyping && e.key !== "Escape") return;
+
+      const key = e.key.toLowerCase();
+      const modifier = e.ctrlKey || e.metaKey;
+
+      if (modifier && key === "z") {
+        e.preventDefault();
+        e.shiftKey ? handleRedo() : handleUndo();
+        return;
+      }
+      if (modifier && key === "y") {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+      if (modifier && key === "c") {
+        if (!selectedLayer && !selectedBaseImage) return;
+        e.preventDefault();
+        copyLayer();
+        return;
+      }
+      if (modifier && key === "x") {
+        if (!selectedLayer && !selectedBaseImage) return;
+        e.preventDefault();
+        cutLayer();
+        return;
+      }
+      if (modifier && key === "v") {
+        if (!clipboardLayer) return;
+        e.preventDefault();
+        pasteLayer();
+        return;
+      }
+      if (modifier && key === "d") {
+        if (!selectedLayer) return;
+        e.preventDefault();
+        duplicateSelectedLayer();
+        return;
+      }
+
+      if (e.key === "Escape") {
+        setSelectedLayerId(null);
+        setSelectedBaseImage(false);
+        setEditMode(null);
+        setDrawingLayer(null);
+        return;
+      }
+
+      if (!selectedLayer) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        deleteLayer(selectedLayer.id);
+        return;
+      }
+
+      const nudge = e.shiftKey ? 0.02 : 0.005;
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) {
+        e.preventDefault();
+        updateSelectedLayer({
+          x: Math.max(0, Math.min(1 - selectedLayer.width, selectedLayer.x + (e.key === "ArrowLeft" ? -nudge : e.key === "ArrowRight" ? nudge : 0))),
+          y: Math.max(0, Math.min(1 - selectedLayer.height, selectedLayer.y + (e.key === "ArrowUp" ? -nudge : e.key === "ArrowDown" ? nudge : 0))),
+        });
+        return;
+      }
+
+      if (e.key === "[" || e.key === "{") {
+        e.preventDefault();
+        rotateSelectedLayerBy(e.shiftKey ? -15 : -2);
+        return;
+      }
+      if (e.key === "]" || e.key === "}") {
+        e.preventDefault();
+        rotateSelectedLayerBy(e.shiftKey ? 15 : 2);
+        return;
+      }
+      if (e.key === "+" || e.key === "=") {
+        e.preventDefault();
+        resizeSelectedLayerBy(e.shiftKey ? 1.12 : 1.04);
+        return;
+      }
+      if (e.key === "-" || e.key === "_") {
+        e.preventDefault();
+        resizeSelectedLayerBy(e.shiftKey ? 0.88 : 0.96);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedLayer, selectedBaseImage, clipboardLayer, selectedFileId, files, canUndo, canRedo]);
 
   const exportAsset = async (format: "png" | "jpg" | "psd") => {
     if (!selectedFile || !canvasRef.current) return;
@@ -2387,6 +2535,15 @@ export default function App() {
               {!isZooming && selectedLayer && isCanvasEditableLayer(selectedLayer) && canvasLayout.width > 0 && canvasLayout.height > 0 && (() => {
                 const rect = getLayerDisplayRect(selectedLayer);
                 if (!rect) return null;
+                const crop = selectedLayer.crop || { x: 0, y: 0, width: 1, height: 1 };
+                const dockWidth = 300;
+                const dockLeft = Math.max(8, Math.min(canvasLayout.width - dockWidth - 8, rect.x));
+                const dockTop = rect.y > 178
+                  ? rect.y - 166
+                  : Math.min(canvasLayout.height - 150, rect.y + rect.height + 12);
+                const stopDockEvent = (event: React.SyntheticEvent) => {
+                  event.stopPropagation();
+                };
                 const handles = [
                   { key: "nw", left: rect.x, top: rect.y },
                   { key: "ne", left: rect.x + rect.width, top: rect.y },
@@ -2414,6 +2571,112 @@ export default function App() {
                         style={{ left: handle.left, top: handle.top, transform: "translate(-50%, -50%)" }}
                       />
                     ))}
+                    <div
+                      className="absolute z-40 pointer-events-auto rounded-2xl border border-blue-400/35 bg-[#070b12]/95 p-2.5 shadow-[0_18px_60px_rgba(0,0,0,0.55),0_0_34px_rgba(59,130,246,0.28)] backdrop-blur-md"
+                      style={{ left: dockLeft, top: Math.max(8, dockTop), width: dockWidth }}
+                      onPointerDown={stopDockEvent}
+                      onMouseDown={stopDockEvent}
+                      onClick={stopDockEvent}
+                      onWheel={(event) => event.stopPropagation()}
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="truncate text-[8px] font-black uppercase tracking-[0.22em] text-blue-200">
+                          {selectedLayer.name}
+                        </span>
+                        <span className="rounded-full border border-blue-400/25 bg-blue-500/10 px-2 py-0.5 text-[7px] font-bold uppercase tracking-[0.18em] text-blue-200">
+                          Canvas Edit
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <button type="button" className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 hover:border-blue-400/60" onClick={() => copyLayer()}>Copy</button>
+                        <button type="button" className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 hover:border-blue-400/60" onClick={() => pasteLayer()} disabled={!clipboardLayer}>Paste</button>
+                        <button type="button" className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 hover:border-blue-400/60" onClick={() => duplicateSelectedLayer()}>Clone</button>
+                        <button type="button" className="rounded-lg border border-red-400/30 bg-red-500/10 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-red-200 hover:border-red-300/70" onClick={() => deleteLayer(selectedLayer.id)}>Delete</button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-1.5">
+                        <button type="button" className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 hover:border-blue-400/60" onClick={() => resizeSelectedLayerBy(0.92)}>Smaller</button>
+                        <button type="button" className="rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-[8px] font-bold uppercase tracking-[0.12em] text-neutral-200 hover:border-blue-400/60" onClick={() => resizeSelectedLayerBy(1.08)}>Larger</button>
+                      </div>
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        <label className="space-y-1">
+                          <span className="text-[7px] font-bold uppercase tracking-[0.18em] text-neutral-500">Rotate</span>
+                          <input
+                            type="range"
+                            min="-180"
+                            max="180"
+                            step="1"
+                            value={selectedLayer.rotation || 0}
+                            onChange={(event) => updateSelectedLayer({ rotation: Number(event.target.value) })}
+                            className="w-full h-1 accent-blue-500"
+                          />
+                        </label>
+                        {(selectedLayer.type === "text" || selectedLayer.type === "signature") ? (
+                          <label className="space-y-1">
+                            <span className="text-[7px] font-bold uppercase tracking-[0.18em] text-neutral-500">Text Size</span>
+                            <input
+                              type="range"
+                              min="8"
+                              max="220"
+                              step="1"
+                              value={getDefaultFontSize(selectedLayer)}
+                              onChange={(event) => updateSelectedLayer({ fontSize: Number(event.target.value) })}
+                              className="w-full h-1 accent-blue-500"
+                            />
+                          </label>
+                        ) : (
+                          <label className="space-y-1">
+                            <span className="text-[7px] font-bold uppercase tracking-[0.18em] text-neutral-500">Scale</span>
+                            <input
+                              type="range"
+                              min="25"
+                              max="220"
+                              step="1"
+                              value={Math.round(selectedLayer.width * 100)}
+                              onChange={(event) => {
+                                const width = Number(event.target.value) / 100;
+                                const ratio = selectedLayer.height / Math.max(0.001, selectedLayer.width);
+                                updateSelectedLayer({
+                                  width: Math.max(0.025, Math.min(1, width)),
+                                  height: Math.max(0.025, Math.min(1, width * ratio)),
+                                });
+                              }}
+                              className="w-full h-1 accent-blue-500"
+                            />
+                          </label>
+                        )}
+                      </div>
+                      {selectedLayer.type === "image" && (
+                        <div className="mt-2 grid grid-cols-2 gap-2 border-t border-white/8 pt-2">
+                          {([
+                            ["Crop X", "x"],
+                            ["Crop Y", "y"],
+                            ["Crop W", "width"],
+                            ["Crop H", "height"],
+                          ] as const).map(([label, key]) => (
+                            <label key={key} className="space-y-1">
+                              <span className="text-[7px] font-bold uppercase tracking-[0.18em] text-neutral-500">{label}</span>
+                              <input
+                                type="range"
+                                min="0"
+                                max="1"
+                                step="0.01"
+                                value={crop[key]}
+                                onChange={(event) => {
+                                  const value = Number(event.target.value);
+                                  const nextCrop = { ...crop, [key]: value };
+                                  nextCrop.width = Math.max(0.05, Math.min(1 - nextCrop.x, nextCrop.width));
+                                  nextCrop.height = Math.max(0.05, Math.min(1 - nextCrop.y, nextCrop.height));
+                                  nextCrop.x = Math.max(0, Math.min(1 - nextCrop.width, nextCrop.x));
+                                  nextCrop.y = Math.max(0, Math.min(1 - nextCrop.height, nextCrop.y));
+                                  updateSelectedLayer({ crop: nextCrop });
+                                }}
+                                className="w-full h-1 accent-blue-500"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
@@ -3241,6 +3504,30 @@ export default function App() {
             </div>
           )}
 
+          {/* Keyboard Shortcuts */}
+          <div className="p-3 rounded-[20px] bg-[#0d0d0d] border border-white/6 space-y-2.5">
+            <h4 className="text-[9px] font-semibold uppercase tracking-[0.28em] text-neutral-500">Keyboard Shortcuts</h4>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[8px] text-neutral-400">
+              {[
+                ["Ctrl/Cmd + C", "Copy layer"],
+                ["Ctrl/Cmd + V", "Paste layer"],
+                ["Ctrl/Cmd + X", "Cut layer"],
+                ["Ctrl/Cmd + D", "Duplicate"],
+                ["Delete", "Remove layer"],
+                ["Arrow keys", "Nudge layer"],
+                ["Shift + Arrows", "Fast nudge"],
+                ["+ / -", "Resize layer"],
+                ["[ / ]", "Rotate layer"],
+                ["Esc", "Clear selection"],
+              ].map(([shortcut, label]) => (
+                <React.Fragment key={shortcut}>
+                  <kbd className="rounded-md border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[7px] text-blue-200">{shortcut}</kbd>
+                  <span>{label}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+
           {/* DL Number Generator */}
           <div className="p-3 rounded-[20px] bg-[#0d0d0d] border border-white/6 space-y-3 overflow-visible">
             <div className="flex items-center justify-between gap-3">
@@ -3372,8 +3659,8 @@ export default function App() {
                   <option value="pdf417">PDF417-style stacked test code</option>
                   <option value="code128">Code 128-style serial/reference</option>
                   <option value="upc">UPC-style numeric test code</option>
-                  <option value="postnet">PostNet-style vertical mail test</option>
-                  <option value="imb">IMB-style vertical mail test</option>
+                  <option value="postnet">PostNet-style horizontal mail test</option>
+                  <option value="imb">IMB-style horizontal mail test</option>
                 </select>
               </div>
 
