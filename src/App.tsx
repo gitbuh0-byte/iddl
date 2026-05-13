@@ -8,6 +8,7 @@ import {
   BarChart3, Zap, Smartphone, Code, CreditCard, Copy, Clipboard, RefreshCw, Wand2, LogOut, ArrowLeft, ArrowRight, Moon, Sun, MoreHorizontal
 } from "lucide-react";
 import { generateMultipleDLPackages, getAllStates, StateCode, DLPackage } from "./utils/dlGenerator";
+import { BarcodeKind, BarcodePayload, generateTestBarcodeDataUrl } from "./utils/barcodeGenerator";
 import { loadOpenCV, createMask, removeMaskedRegionPreserveBackground } from "./utils/inpainting";
 import { analyzeImageWithOpenCV } from "./utils/opencvAnalysis";
 import { Login } from "./components/Login";
@@ -41,6 +42,7 @@ interface Layer {
   fontStyle?: string;
   imageSrc?: string;
   crop?: { x: number; y: number; width: number; height: number };
+  rotation?: number;
 }
 
 interface ManagedFile {
@@ -123,6 +125,22 @@ export default function App() {
   const [selectedDLState, setSelectedDLState] = useState<StateCode>("CA");
   const [generatedDLPackages, setGeneratedDLPackages] = useState<DLPackage[]>([]);
   const [dlCopiedIndex, setDlCopiedIndex] = useState<{ index: number; field: "dlNumber" | "icn" | "dd" } | null>(null);
+  const [barcodeKind, setBarcodeKind] = useState<BarcodeKind>("pdf417");
+  const [barcodePayload, setBarcodePayload] = useState<BarcodePayload>({
+    fullName: "Sample Person",
+    dob: "1990-01-01",
+    gender: "X",
+    licenseNumber: "TST-ID-000000",
+    issueDate: "2026-01-01",
+    expirationDate: "2028-01-01",
+    address: "123 Test Street, Sample City, ST 00000",
+    licenseClass: "TEST-C",
+    restrictions: "TEST ONLY",
+    serialNumber: "SERIAL-0001",
+    documentId: "DOC-TEST-0001",
+    zipCode: "00000",
+    deliveryPoint: "00",
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -145,9 +163,23 @@ export default function App() {
     { label: "Syne", value: "Syne, sans-serif" },
     { label: "Roboto", value: "Roboto, sans-serif" },
     { label: "Montserrat", value: "Montserrat, sans-serif" },
+    { label: "Orbitron", value: "Orbitron, sans-serif" },
+    { label: "Rajdhani", value: "Rajdhani, sans-serif" },
+    { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+    { label: "Oswald", value: "Oswald, sans-serif" },
+    { label: "Playfair Display", value: "'Playfair Display', serif" },
+    { label: "Merriweather", value: "Merriweather, serif" },
+    { label: "IBM Plex Mono", value: "'IBM Plex Mono', monospace" },
     { label: "Pacifico (Signature)", value: "Pacifico, cursive" },
     { label: "Great Vibes (Signature)", value: "Great Vibes, cursive" },
     { label: "Caveat (Signature)", value: "Caveat, cursive" },
+    { label: "Dancing Script (Signature)", value: "'Dancing Script', cursive" },
+    { label: "Allura (Signature)", value: "Allura, cursive" },
+    { label: "Sacramento (Signature)", value: "Sacramento, cursive" },
+    { label: "Alex Brush (Signature)", value: "'Alex Brush', cursive" },
+    { label: "Pinyon Script (Signature)", value: "'Pinyon Script', cursive" },
+    { label: "Parisienne (Signature)", value: "Parisienne, cursive" },
+    { label: "Satisfy (Signature)", value: "Satisfy, cursive" },
   ];
 
   const textStyles: Array<{ label: string; value: "normal" | "italic" | "oblique" }> = [
@@ -857,7 +889,14 @@ export default function App() {
 
               ctx.save();
               ctx.globalAlpha = layer.opacity;
-              ctx.drawImage(overlay, sx, sy, sw, sh, x, y, w, h);
+              const rotation = ((layer.rotation || 0) * Math.PI) / 180;
+              if (rotation) {
+                ctx.translate(x + w / 2, y + h / 2);
+                ctx.rotate(rotation);
+                ctx.drawImage(overlay, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+              } else {
+                ctx.drawImage(overlay, sx, sy, sw, sh, x, y, w, h);
+              }
               ctx.restore();
             };
 
@@ -889,6 +928,15 @@ export default function App() {
             ctx.textAlign = "left";
             const textX = x + 10;
             const textY = y + 10;
+            const rotation = ((layer.rotation || 0) * Math.PI) / 180;
+            if (rotation) {
+              ctx.translate(x + w / 2, y + h / 2);
+              ctx.rotate(rotation);
+              ctx.strokeText(text, -w / 2 + 10, -h / 2 + 10);
+              ctx.fillText(text, -w / 2 + 10, -h / 2 + 10);
+              ctx.restore();
+              return;
+            }
             ctx.strokeText(text, textX, textY);
             ctx.fillText(text, textX, textY);
             ctx.restore();
@@ -1711,6 +1759,44 @@ export default function App() {
     setGeneratedDLPackages(newPackages);
   };
 
+  const updateBarcodePayload = (field: keyof BarcodePayload, value: string) => {
+    setBarcodePayload((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const addBarcodeLayer = () => {
+    if (!selectedFileId) {
+      alert("Upload or select an image before adding a barcode layer.");
+      return;
+    }
+
+    const dataUrl = generateTestBarcodeDataUrl(barcodeKind, barcodePayload);
+    const newLayer: Layer = {
+      id: `barcode-${Date.now()}`,
+      name: `${barcodeKind.toUpperCase()} Synthetic Test Code`,
+      type: "image",
+      x: 0.15,
+      y: 0.15,
+      width: barcodeKind === "postnet" || barcodeKind === "imb" ? 0.22 : 0.55,
+      height: barcodeKind === "postnet" || barcodeKind === "imb" ? 0.55 : 0.18,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      imageSrc: dataUrl,
+      crop: { x: 0, y: 0, width: 1, height: 1 },
+      rotation: 0,
+    };
+
+    pushSnapshot();
+    clearRedoStack();
+    setFiles((prev) => prev.map((file) =>
+      file.id === selectedFileId
+        ? { ...file, layers: [...file.layers, newLayer] }
+        : file
+    ));
+    setSelectedLayerId(newLayer.id);
+    setSelectedBaseImage(false);
+  };
+
   const copyToClipboard = (text: string, index: number, field: "dlNumber" | "icn" | "dd") => {
     navigator.clipboard.writeText(text);
     setDlCopiedIndex({ index, field });
@@ -2279,8 +2365,15 @@ export default function App() {
                 return (
                   <div className="absolute inset-0 pointer-events-none">
                     <div
-                      className="absolute rounded-xl border border-blue-500/70"
-                      style={{ left: rect.x, top: rect.y, width: rect.width, height: rect.height }}
+                      className="absolute rounded-xl border-2 border-blue-400/80 shadow-[0_0_24px_rgba(59,130,246,0.45)]"
+                      style={{
+                        left: rect.x,
+                        top: rect.y,
+                        width: rect.width,
+                        height: rect.height,
+                        transform: `rotate(${selectedLayer.rotation || 0}deg)`,
+                        transformOrigin: "center center",
+                      }}
                     />
                     {handles.map((handle) => (
                       <div
@@ -2930,6 +3023,50 @@ export default function App() {
                           <span className="text-[8px] text-neutral-600">{(selectedLayer.height * 100).toFixed(1)}%</span>
                         </div>
                       </div>
+                      <div className="pt-3">
+                        <label className="text-[8px] uppercase tracking-[0.2em] text-neutral-500">Tilt / Rotation</label>
+                        <input
+                          type="range"
+                          min="-45"
+                          max="45"
+                          step="1"
+                          value={selectedLayer.rotation || 0}
+                          onChange={(e) => updateSelectedLayer({ rotation: Number(e.target.value) })}
+                          className="w-full h-1 bg-neutral-800 rounded-full accent-blue-500"
+                        />
+                        <span className="text-[8px] text-neutral-600">{selectedLayer.rotation || 0}deg</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 pt-3">
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedLayer({
+                            width: Math.max(0.05, selectedLayer.width - 0.025),
+                            height: Math.max(0.05, selectedLayer.height - 0.025),
+                            fontSize: selectedLayer.fontSize ? Math.max(8, selectedLayer.fontSize - 2) : selectedLayer.fontSize,
+                          })}
+                          className="py-2 rounded-lg bg-neutral-800/70 border border-neutral-700 text-[8px] font-bold uppercase text-neutral-300"
+                        >
+                          Smaller
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedLayer({ rotation: 0 })}
+                          className="py-2 rounded-lg bg-neutral-800/70 border border-neutral-700 text-[8px] font-bold uppercase text-neutral-300"
+                        >
+                          Reset Tilt
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateSelectedLayer({
+                            width: Math.min(1, selectedLayer.width + 0.025),
+                            height: Math.min(1, selectedLayer.height + 0.025),
+                            fontSize: selectedLayer.fontSize ? Math.min(180, selectedLayer.fontSize + 2) : selectedLayer.fontSize,
+                          })}
+                          className="py-2 rounded-lg bg-neutral-800/70 border border-neutral-700 text-[8px] font-bold uppercase text-neutral-300"
+                        >
+                          Larger
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3074,7 +3211,7 @@ export default function App() {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <CreditCard className="w-4 h-4 text-neutral-500" />
-                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-neutral-500">DL Number Generator</span>
+                <span className="text-[9px] font-semibold uppercase tracking-[0.32em] text-neutral-500">Synthetic Test ID Generator</span>
               </div>
             </div>
             
@@ -3099,12 +3236,12 @@ export default function App() {
                 className="w-full inline-flex items-center justify-center gap-1.5 h-12 rounded-xl text-[8px] font-semibold uppercase tracking-[0.16em] transition-all border border-blue-500/40 bg-blue-600/10 text-blue-200 hover:bg-blue-600/15"
               >
                 <RefreshCw className="w-2.5 h-2.5" />
-                Generate
+                Generate Test IDs
               </button>
 
               {generatedDLPackages.length > 0 && (
                 <div className="space-y-3 max-h-[40vh] overflow-y-auto border border-neutral-700/40 rounded-md bg-[var(--bg-secondary)] p-2">
-                  <p className="text-[8px] text-neutral-500 font-semibold">Generated packages</p>
+                  <p className="text-[8px] text-amber-400/80 font-semibold">Synthetic packages - not valid IDs</p>
                   {generatedDLPackages.map((pkg: DLPackage, index: number) => (
                     <div 
                       key={index}
@@ -3176,6 +3313,118 @@ export default function App() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Synthetic Barcode Generator */}
+          <div className="p-3 rounded-[20px] bg-[#0d0d0d] border border-white/6 space-y-3 overflow-visible">
+            <div className="flex items-center gap-2">
+              <Code className="w-4 h-4 text-neutral-500" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.28em] text-neutral-500">Synthetic Barcode Generator</span>
+            </div>
+            <p className="text-[8px] leading-relaxed text-amber-400/80">
+              Test fixtures only. Outputs are visibly marked synthetic and are not valid government, postal, or credential barcodes.
+            </p>
+
+            <div className="space-y-2">
+              <div>
+                <label className="text-[7px] font-medium text-neutral-500 mb-1.5 block uppercase tracking-[0.18em]">Barcode Type</label>
+                <select
+                  value={barcodeKind}
+                  onChange={(e) => setBarcodeKind(e.target.value as BarcodeKind)}
+                  className="w-full h-10 px-3 rounded-xl bg-[#151515] border border-white/8 text-[9px] font-medium text-neutral-200 focus:border-blue-500 focus:outline-none"
+                >
+                  <option value="pdf417">PDF417-style stacked test code</option>
+                  <option value="code128">Code 128-style serial/reference</option>
+                  <option value="upc">UPC-style numeric test code</option>
+                  <option value="postnet">PostNet-style vertical mail test</option>
+                  <option value="imb">IMB-style vertical mail test</option>
+                </select>
+              </div>
+
+              {barcodeKind === "pdf417" && (
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    ["fullName", "Full name"],
+                    ["dob", "DOB"],
+                    ["gender", "Gender"],
+                    ["licenseNumber", "Test ID #"],
+                    ["issueDate", "Issue date"],
+                    ["expirationDate", "Exp date"],
+                    ["licenseClass", "Class"],
+                    ["restrictions", "Restrictions"],
+                  ].map(([field, label]) => (
+                    <div key={field}>
+                      <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">{label}</label>
+                      <input
+                        type={field.toLowerCase().includes("date") || field === "dob" ? "date" : "text"}
+                        value={barcodePayload[field as keyof BarcodePayload]}
+                        onChange={(e) => updateBarcodePayload(field as keyof BarcodePayload, e.target.value)}
+                        className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                      />
+                    </div>
+                  ))}
+                  <div className="col-span-2">
+                    <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">Address</label>
+                    <input
+                      value={barcodePayload.address}
+                      onChange={(e) => updateBarcodePayload("address", e.target.value)}
+                      className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(barcodeKind === "code128" || barcodeKind === "upc") && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">Serial number</label>
+                    <input
+                      value={barcodePayload.serialNumber}
+                      onChange={(e) => updateBarcodePayload("serialNumber", e.target.value)}
+                      className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">Document ID</label>
+                    <input
+                      value={barcodePayload.documentId}
+                      onChange={(e) => updateBarcodePayload("documentId", e.target.value)}
+                      className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {(barcodeKind === "postnet" || barcodeKind === "imb") && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">ZIP code</label>
+                    <input
+                      value={barcodePayload.zipCode}
+                      onChange={(e) => updateBarcodePayload("zipCode", e.target.value)}
+                      className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[7px] uppercase tracking-[0.14em] text-neutral-600">Delivery point</label>
+                    <input
+                      value={barcodePayload.deliveryPoint}
+                      onChange={(e) => updateBarcodePayload("deliveryPoint", e.target.value)}
+                      className="w-full h-9 px-2 rounded-lg bg-neutral-950 border border-neutral-800 text-[9px] text-neutral-200"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={addBarcodeLayer}
+                className="w-full inline-flex items-center justify-center gap-1.5 h-11 rounded-xl text-[8px] font-semibold uppercase tracking-[0.16em] transition-all border border-cyan-500/40 bg-cyan-600/10 text-cyan-200 hover:bg-cyan-600/15"
+              >
+                <Plus className="w-3 h-3" />
+                Add Adjustable Code Layer
+              </button>
             </div>
           </div>
         </div>

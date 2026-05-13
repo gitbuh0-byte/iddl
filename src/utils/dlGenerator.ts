@@ -1,9 +1,14 @@
 /**
- * Driver's License Number Generator
- * Generates realistic DL numbers, ICN, and DD for various US states
+ * Synthetic document identifier generator for detector QA.
+ * These values are intentionally marked and shaped as non-official test fixtures.
  */
 
-export type StateCode = "IA" | "NH" | "AZ" | "FL" | "IL" | "WV" | "CA";
+export type StateCode =
+  | "AL" | "AK" | "AZ" | "AR" | "CA" | "CO" | "CT" | "DE" | "FL" | "GA"
+  | "HI" | "ID" | "IL" | "IN" | "IA" | "KS" | "KY" | "LA" | "ME" | "MD"
+  | "MA" | "MI" | "MN" | "MS" | "MO" | "MT" | "NE" | "NV" | "NH" | "NJ"
+  | "NM" | "NY" | "NC" | "ND" | "OH" | "OK" | "OR" | "PA" | "RI" | "SC"
+  | "SD" | "TN" | "TX" | "UT" | "VT" | "VA" | "WA" | "WV" | "WI" | "WY";
 
 export interface DLPackage {
   dlNumber: string;
@@ -11,7 +16,7 @@ export interface DLPackage {
   dd: string;
 }
 
-interface DLFormat {
+export interface DLFormat {
   state: string;
   stateCode: StateCode;
   format: string;
@@ -20,7 +25,61 @@ interface DLFormat {
   generateDD: () => string;
 }
 
-// Random number generator helper
+const stateNames: Record<StateCode, string> = {
+  AL: "Alabama",
+  AK: "Alaska",
+  AZ: "Arizona",
+  AR: "Arkansas",
+  CA: "California",
+  CO: "Colorado",
+  CT: "Connecticut",
+  DE: "Delaware",
+  FL: "Florida",
+  GA: "Georgia",
+  HI: "Hawaii",
+  ID: "Idaho",
+  IL: "Illinois",
+  IN: "Indiana",
+  IA: "Iowa",
+  KS: "Kansas",
+  KY: "Kentucky",
+  LA: "Louisiana",
+  ME: "Maine",
+  MD: "Maryland",
+  MA: "Massachusetts",
+  MI: "Michigan",
+  MN: "Minnesota",
+  MS: "Mississippi",
+  MO: "Missouri",
+  MT: "Montana",
+  NE: "Nebraska",
+  NV: "Nevada",
+  NH: "New Hampshire",
+  NJ: "New Jersey",
+  NM: "New Mexico",
+  NY: "New York",
+  NC: "North Carolina",
+  ND: "North Dakota",
+  OH: "Ohio",
+  OK: "Oklahoma",
+  OR: "Oregon",
+  PA: "Pennsylvania",
+  RI: "Rhode Island",
+  SC: "South Carolina",
+  SD: "South Dakota",
+  TN: "Tennessee",
+  TX: "Texas",
+  UT: "Utah",
+  VT: "Vermont",
+  VA: "Virginia",
+  WA: "Washington",
+  WV: "West Virginia",
+  WI: "Wisconsin",
+  WY: "Wyoming",
+};
+
+const stateCodes = Object.keys(stateNames) as StateCode[];
+
 const randomInt = (min: number, max: number): number =>
   Math.floor(Math.random() * (max - min + 1)) + min;
 
@@ -30,234 +89,50 @@ const randomChar = (chars: string): string =>
 const padZeros = (num: number, length: number): string =>
   String(num).padStart(length, "0");
 
-const generateRandomString = (length: number, chars: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"): string =>
+const generateRandomString = (length: number, chars = "ABCDEFGHJKLMNPQRSTUVWXYZ"): string =>
   Array.from({ length }, () => randomChar(chars)).join("");
 
-// State-specific generators
-const dlFormats: Record<StateCode, DLFormat> = {
-  IA: {
-    state: "Iowa",
-    stateCode: "IA",
-    format: "XXX-XX-XXXX",
-    generate: () => {
-      // Iowa: 3 digits - 2 digits - 4 digits
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = padZeros(randomInt(10, 99), 2);
-      const part3 = padZeros(randomInt(1000, 9999), 4);
-      return `${part1}-${part2}-${part3}`;
-    },
-    generateICN: () => {
-      // Iowa ICN format (alphanumeric identifier)
-      const chars1 = padZeros(randomInt(100, 999), 3);
-      const chars2 = generateRandomString(2);
-      const chars3 = padZeros(randomInt(1000000, 9999999), 7);
-      const chars4 = padZeros(randomInt(10, 99), 2);
-      return `${chars1}${chars2}${chars3}${chars4}`;
-    },
-    generateDD: () => {
-      // Iowa DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      const part4 = generateRandomString(1);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  NH: {
-    state: "New Hampshire",
-    stateCode: "NH",
-    format: "XX#####",
-    generate: () => {
-      // New Hampshire: 2 letters + 5 digits
-      const letters = generateRandomString(2);
-      const numbers = padZeros(randomInt(10000, 99999), 5);
-      return `${letters}${numbers}`;
-    },
-    generateICN: () => {
-      // NH ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(1000, 9999), 4);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // NH DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  AZ: {
-    state: "Arizona",
-    stateCode: "AZ",
-    format: "#X#####",
-    generate: () => {
-      // Arizona: 1 digit + 1 letter + 5 digits + 1 digit (simplified)
-      const digit1 = randomInt(1, 9);
-      const letter = randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-      const numbers = padZeros(randomInt(10000, 99999), 5);
-      const digit2 = randomInt(0, 9);
-      return `${digit1}${letter}${numbers}${digit2}`;
-    },
-    generateICN: () => {
-      // AZ ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(10000, 99999), 5);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // AZ DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  FL: {
-    state: "Florida",
-    stateCode: "FL",
-    format: "X########",
-    generate: () => {
-      // Florida: 1 letter + 8 digits
-      const letter = randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-      const numbers = padZeros(randomInt(10000000, 99999999), 8);
-      return `${letter}${numbers}`;
-    },
-    generateICN: () => {
-      // FL ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(100000, 999999), 6);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // FL DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  IL: {
-    state: "Illinois",
-    stateCode: "IL",
-    format: "X#####X#",
-    generate: () => {
-      // Illinois: 1 letter + 5 digits + 1 letter + 1 digit
-      const letter1 = randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-      const numbers1 = padZeros(randomInt(10000, 99999), 5);
-      const letter2 = randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-      const number = randomInt(0, 9);
-      return `${letter1}${numbers1}${letter2}${number}`;
-    },
-    generateICN: () => {
-      // IL ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(100000, 999999), 6);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // IL DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  WV: {
-    state: "West Virginia",
-    stateCode: "WV",
-    format: "######",
-    generate: () => {
-      // West Virginia: 6-7 digits
-      const numbers = padZeros(randomInt(100000, 999999), 6);
-      return numbers;
-    },
-    generateICN: () => {
-      // WV ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(100000, 999999), 6);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // WV DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
-  CA: {
-    state: "California",
-    stateCode: "CA",
-    format: "X########",
-    generate: () => {
-      // California: 1 letter + 5-8 digits (using 8 for consistency)
-      const letter = randomChar("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-      const numbers = padZeros(randomInt(10000000, 99999999), 8);
-      return `${letter}${numbers}`;
-    },
-    generateICN: () => {
-      // CA ICN format
-      const part1 = padZeros(randomInt(100, 999), 3);
-      const part2 = generateRandomString(2);
-      const part3 = padZeros(randomInt(1000000, 9999999), 7);
-      const part4 = padZeros(randomInt(100000, 999999), 6);
-      return `${part1}${part2}${part3}${part4}`;
-    },
-    generateDD: () => {
-      // CA DD format
-      const part1 = padZeros(randomInt(10, 999), 3);
-      const part2 = padZeros(randomInt(100000, 999999), 6);
-      const part3 = generateRandomString(2);
-      const year = randomInt(18, 24);
-      const month = randomInt(1, 12);
-      const day = randomInt(1, 28);
-      return `${part1}${part2}${part3}${year}${String(month).padStart(2, "0")}${String(day).padStart(2, "0")}D`;
-    },
-  },
+const stateSeed = (stateCode: StateCode) =>
+  stateCode.charCodeAt(0) * 31 + stateCode.charCodeAt(1);
+
+const generateSyntheticDL = (stateCode: StateCode): string => {
+  const seed = stateSeed(stateCode);
+  const variants = [
+    () => `TST-${stateCode}-${generateRandomString(1)}${padZeros(randomInt(100000, 999999), 6)}`,
+    () => `TST-${stateCode}-${padZeros(seed % 100, 2)}-${padZeros(randomInt(1000000, 9999999), 7)}`,
+    () => `TST-${stateCode}-${generateRandomString(2)}-${padZeros(randomInt(10000, 99999), 5)}`,
+    () => `TST-${stateCode}-${padZeros(randomInt(100, 999), 3)}-${generateRandomString(2)}${padZeros(randomInt(1000, 9999), 4)}`,
+  ];
+  return variants[seed % variants.length]();
 };
+
+const generateSyntheticICN = (stateCode: StateCode): string =>
+  `SYN-${stateCode}-ICN-${padZeros(randomInt(1000, 9999), 4)}-${generateRandomString(3)}-${padZeros(randomInt(100000, 999999), 6)}`;
+
+const generateSyntheticDD = (stateCode: StateCode): string =>
+  `SYN-${stateCode}-DD-${new Date().getFullYear()}-${padZeros(randomInt(10000000, 99999999), 8)}-TEST`;
+
+const dlFormats = stateCodes.reduce((acc, stateCode) => {
+  acc[stateCode] = {
+    state: stateNames[stateCode],
+    stateCode,
+    format: "SYNTHETIC TEST ID",
+    generate: () => generateSyntheticDL(stateCode),
+    generateICN: () => generateSyntheticICN(stateCode),
+    generateDD: () => generateSyntheticDD(stateCode),
+  };
+  return acc;
+}, {} as Record<StateCode, DLFormat>);
 
 export const generateDLNumber = (stateCode: StateCode): string => {
   const format = dlFormats[stateCode];
-  if (!format) {
-    throw new Error(`State code ${stateCode} not supported`);
-  }
+  if (!format) throw new Error(`State code ${stateCode} not supported`);
   return format.generate();
 };
 
 export const generateDLPackage = (stateCode: StateCode): DLPackage => {
   const format = dlFormats[stateCode];
-  if (!format) {
-    throw new Error(`State code ${stateCode} not supported`);
-  }
+  if (!format) throw new Error(`State code ${stateCode} not supported`);
   return {
     dlNumber: format.generate(),
     icn: format.generateICN(),
@@ -265,28 +140,17 @@ export const generateDLPackage = (stateCode: StateCode): DLPackage => {
   };
 };
 
-export const getStateName = (stateCode: StateCode): string => {
-  return dlFormats[stateCode]?.state || "Unknown";
-};
+export const getStateName = (stateCode: StateCode): string =>
+  dlFormats[stateCode]?.state || "Unknown";
 
-export const getStateFormat = (stateCode: StateCode): string => {
-  return dlFormats[stateCode]?.format || "";
-};
+export const getStateFormat = (stateCode: StateCode): string =>
+  dlFormats[stateCode]?.format || "";
 
-export const getAllStates = (): DLFormat[] => {
-  return Object.values(dlFormats);
-};
+export const getAllStates = (): DLFormat[] =>
+  Object.values(dlFormats).sort((a, b) => a.state.localeCompare(b.state));
 
-export const generateMultipleDLNumbers = (
-  stateCode: StateCode,
-  count: number
-): string[] => {
-  return Array.from({ length: count }, () => generateDLNumber(stateCode));
-};
+export const generateMultipleDLNumbers = (stateCode: StateCode, count: number): string[] =>
+  Array.from({ length: count }, () => generateDLNumber(stateCode));
 
-export const generateMultipleDLPackages = (
-  stateCode: StateCode,
-  count: number
-): DLPackage[] => {
-  return Array.from({ length: count }, () => generateDLPackage(stateCode));
-};
+export const generateMultipleDLPackages = (stateCode: StateCode, count: number): DLPackage[] =>
+  Array.from({ length: count }, () => generateDLPackage(stateCode));
