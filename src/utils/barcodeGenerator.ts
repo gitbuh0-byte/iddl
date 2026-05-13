@@ -22,32 +22,15 @@ const hashString = (value: string) => {
     hash ^= value.charCodeAt(i);
     hash = Math.imul(hash, 16777619);
   }
-  return Math.abs(hash >>> 0).toString(16).toUpperCase().padStart(8, "0");
+  return Math.abs(hash >>> 0).toString(36).toUpperCase();
 };
 
 const bitAt = (seed: string, index: number) => {
-  const code = seed.charCodeAt(index % seed.length) || 31;
-  return ((code * (index + 17) + index * 13) % 7) < 3;
+  const char = seed.charCodeAt(index % Math.max(1, seed.length)) || 71;
+  return ((char * 1103515245 + index * 12345 + index ** 2) >>> 0) % 11 < 5;
 };
 
-const drawLabel = (ctx: CanvasRenderingContext2D, width: number, title: string, subtitle: string) => {
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "700 20px ui-monospace, monospace";
-  ctx.fillText(title, 24, 32);
-  ctx.fillStyle = "#64748b";
-  ctx.font = "700 11px ui-monospace, monospace";
-  ctx.fillText(subtitle, 24, 52);
-  ctx.fillStyle = "rgba(239,68,68,0.14)";
-  ctx.font = "900 44px ui-monospace, monospace";
-  ctx.translate(width / 2, 135);
-  ctx.rotate(-0.12);
-  ctx.textAlign = "center";
-  ctx.fillText("SYNTHETIC TEST", 0, 0);
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.textAlign = "left";
-};
-
-const createCanvas = (width = 760, height = 280) => {
+const createCanvas = (width: number, height: number) => {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -55,32 +38,98 @@ const createCanvas = (width = 760, height = 280) => {
   if (!ctx) throw new Error("Unable to create barcode canvas");
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
-  ctx.fillStyle = "#0f172a";
-  ctx.fillRect(10, 10, width - 20, height - 20);
-  ctx.fillStyle = "#ffffff";
+  ctx.fillStyle = "#050505";
   return { canvas, ctx };
 };
 
 export const buildBarcodePayload = (kind: BarcodeKind, payload: BarcodePayload) => {
   const base = [
-    `TEST_ONLY=TRUE`,
-    `KIND=${kind.toUpperCase()}`,
-    `NAME=${payload.fullName || "SAMPLE PERSON"}`,
-    `DOB=${payload.dob || "1990-01-01"}`,
-    `GENDER=${payload.gender || "X"}`,
-    `ID=${payload.licenseNumber || "TST-ID-000000"}`,
-    `ISS=${payload.issueDate || "2026-01-01"}`,
-    `EXP=${payload.expirationDate || "2028-01-01"}`,
-    `ADDR=${payload.address || "123 TEST ST, SAMPLE CITY, ST 00000"}`,
-    `CLASS=${payload.licenseClass || "TEST-C"}`,
-    `RESTR=${payload.restrictions || "TEST ONLY"}`,
-    `SERIAL=${payload.serialNumber || "SERIAL-0001"}`,
-    `DOC=${payload.documentId || "DOC-TEST-0001"}`,
-    `ZIP=${payload.zipCode || "00000"}`,
-    `DP=${payload.deliveryPoint || "00"}`,
+    "SYNTHETIC_TEST_FIXTURE",
+    kind.toUpperCase(),
+    payload.fullName || "SAMPLE PERSON",
+    payload.dob || "1990-01-01",
+    payload.gender || "X",
+    payload.licenseNumber || "TST-ID-000000",
+    payload.issueDate || "2026-01-01",
+    payload.expirationDate || "2028-01-01",
+    payload.address || "123 TEST ST SAMPLE CITY ST 00000",
+    payload.licenseClass || "TEST-C",
+    payload.restrictions || "TEST ONLY",
+    payload.serialNumber || "SERIAL-0001",
+    payload.documentId || "DOC-TEST-0001",
+    payload.zipCode || "00000",
+    payload.deliveryPoint || "00",
   ].join("|");
 
-  return `${base}|TEST_HASH=${hashString(base)}|NOT_VALID_FOR_IDENTIFICATION`;
+  return `${base}|SYNHASH=${hashString(base)}|NON_DECODABLE_SAMPLE`;
+};
+
+const drawPdf417 = (ctx: CanvasRenderingContext2D, seed: string) => {
+  const rows = 18;
+  const modules = 152;
+  const moduleW = 3;
+  const rowH = 4;
+  const x0 = 12;
+  const y0 = 8;
+
+  for (let row = 0; row < rows; row += 1) {
+    const y = y0 + row * rowH;
+
+    // PDF417-like start/stop guard texture. Deliberately non-standard.
+    ctx.fillRect(x0, y, 3, rowH - 1);
+    ctx.fillRect(x0 + 6, y, 2, rowH - 1);
+    ctx.fillRect(x0 + modules * moduleW - 9, y, 2, rowH - 1);
+    ctx.fillRect(x0 + modules * moduleW - 4, y, 3, rowH - 1);
+
+    let x = x0 + 14;
+    while (x < x0 + modules * moduleW - 18) {
+      const i = row * modules + Math.floor((x - x0) / moduleW);
+      const run = bitAt(seed, i) ? 1 + (i % 4) : 1 + (i % 3);
+      if (bitAt(seed, i + row)) {
+        ctx.fillRect(x, y, Math.min(run * moduleW, x0 + modules * moduleW - 18 - x), rowH - 1);
+      }
+      x += run * moduleW + (bitAt(seed, i + 13) ? moduleW : 0);
+    }
+  }
+};
+
+const drawLinear = (ctx: CanvasRenderingContext2D, seed: string, numericLabel?: string) => {
+  let x = 10;
+  const y = 6;
+  const height = numericLabel ? 54 : 32;
+
+  for (let i = 0; i < 170; i += 1) {
+    const wide = bitAt(seed, i + 7);
+    const barW = wide ? 3 : 1;
+    const gap = bitAt(seed, i + 19) ? 2 : 1;
+    if (i % 3 !== 1 || bitAt(seed, i)) {
+      ctx.fillRect(x, y, barW, height + (i % 11 === 0 ? 8 : 0));
+    }
+    x += barW + gap;
+    if (x > 470) break;
+  }
+
+  if (numericLabel) {
+    ctx.font = "700 12px ui-monospace, monospace";
+    ctx.fillText(numericLabel, 14, 82);
+  }
+};
+
+const drawPostal = (ctx: CanvasRenderingContext2D, seed: string, kind: BarcodeKind) => {
+  let y = 14;
+  const x0 = 34;
+  for (let i = 0; i < 72; i += 1) {
+    const tall = bitAt(seed, i);
+    const asc = kind === "imb" && bitAt(seed, i + 17);
+    const desc = kind === "imb" && bitAt(seed, i + 29);
+    const x = x0 + (i % 4) * 6;
+    const barY = y + (asc ? 0 : 9);
+    const height = kind === "imb"
+      ? (asc && desc ? 38 : tall ? 30 : 20)
+      : tall ? 38 : 18;
+    ctx.fillRect(x, barY, 2, height);
+    if (i % 4 === 3) y += 9;
+  }
 };
 
 export const generateTestBarcodeDataUrl = (
@@ -88,55 +137,32 @@ export const generateTestBarcodeDataUrl = (
   payload: BarcodePayload
 ) => {
   const text = buildBarcodePayload(kind, payload);
-  const { canvas, ctx } = createCanvas(kind === "postnet" || kind === "imb" ? 360 : 760, kind === "postnet" || kind === "imb" ? 520 : 280);
-  const title = `${kind.toUpperCase()} TEST CODE`;
-  drawLabel(ctx, canvas.width, title, "Synthetic QA fixture - not official or scannable as credential");
-  ctx.fillStyle = "#ffffff";
+  const dimensions: Record<BarcodeKind, [number, number]> = {
+    pdf417: [492, 92],
+    code128: [492, 48],
+    upc: [492, 92],
+    postnet: [92, 720],
+    imb: [92, 720],
+  };
+  const [width, height] = dimensions[kind];
+  const { canvas, ctx } = createCanvas(width, height);
 
   if (kind === "pdf417") {
-    const rows = 12;
-    const cols = 44;
-    const x0 = 24;
-    const y0 = 78;
-    const cellW = 15;
-    const cellH = 10;
-    for (let row = 0; row < rows; row += 1) {
-      for (let col = 0; col < cols; col += 1) {
-        if (bitAt(text, row * cols + col)) {
-          ctx.fillRect(x0 + col * cellW, y0 + row * cellH, cellW - 2, cellH - 1);
-        }
-      }
-    }
-  } else if (kind === "code128" || kind === "upc") {
-    const seed = kind === "upc" ? `${payload.serialNumber}${payload.documentId}`.replace(/\D/g, "").padEnd(12, "0").slice(0, 12) : text;
-    let x = 28;
-    const y = 86;
-    for (let i = 0; i < 96; i += 1) {
-      const barW = bitAt(seed, i) ? 4 : 2;
-      if (i % 2 === 0 || bitAt(seed, i + 5)) ctx.fillRect(x, y, barW, 108);
-      x += barW + (bitAt(seed, i + 11) ? 3 : 2);
-    }
-    ctx.font = "700 18px ui-monospace, monospace";
-    ctx.fillText(kind === "upc" ? seed : payload.documentId || "DOC-TEST-0001", 28, 226);
+    drawPdf417(ctx, text);
+  } else if (kind === "code128") {
+    drawLinear(ctx, `${payload.serialNumber}|${payload.documentId}|${text}`);
+  } else if (kind === "upc") {
+    const numeric = `${payload.serialNumber}${payload.documentId}`.replace(/\D/g, "").padEnd(12, "0").slice(0, 12);
+    drawLinear(ctx, numeric, numeric);
   } else {
-    const seed = `${payload.zipCode}${payload.deliveryPoint}${payload.documentId}`.replace(/[^A-Z0-9]/gi, "");
-    let y = 82;
-    const x0 = 150;
-    for (let i = 0; i < 72; i += 1) {
-      const long = bitAt(seed || text, i);
-      const width = kind === "imb" ? 4 : 3;
-      const height = long ? 34 : 18;
-      const x = x0 + (i % 4) * 12;
-      ctx.fillRect(x, y, width, height);
-      if (i % 4 === 3) y += 18;
-    }
-    ctx.font = "700 14px ui-monospace, monospace";
-    ctx.fillText(`ZIP ${payload.zipCode || "00000"}-${payload.deliveryPoint || "00"}`, 32, canvas.height - 32);
+    drawPostal(ctx, `${payload.zipCode}${payload.deliveryPoint}${payload.documentId}${text}`, kind);
+    ctx.save();
+    ctx.translate(12, height - 16);
+    ctx.rotate(-Math.PI / 2);
+    ctx.font = "500 12px ui-monospace, monospace";
+    ctx.fillText(`${payload.zipCode || "00000"} ${payload.deliveryPoint || "00"}`, 0, 0);
+    ctx.restore();
   }
 
-  ctx.fillStyle = "#38bdf8";
-  ctx.font = "700 10px ui-monospace, monospace";
-  const chunks = text.match(/.{1,82}/g) || [];
-  chunks.slice(0, 2).forEach((line, index) => ctx.fillText(line, 24, canvas.height - 42 + index * 14));
   return canvas.toDataURL("image/png");
 };

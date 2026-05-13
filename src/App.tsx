@@ -68,6 +68,13 @@ const REMOVABLE_LAYER_TYPES = new Set<Layer["type"]>(["face", "text", "signature
 const isRemovableLayer = (layer: Layer) => REMOVABLE_LAYER_TYPES.has(layer.type);
 const isCanvasEditableLayer = (layer: Layer) => !layer.locked && layer.type !== "background";
 const getDefaultFontSize = (layer: Layer) => layer.fontSize || (layer.type === "signature" ? 38 : 28);
+const isAddedLayer = (layer: Layer) =>
+  layer.type === "image" ||
+  Boolean(layer.text) ||
+  layer.id.startsWith("text-") ||
+  layer.id.startsWith("signature-") ||
+  layer.id.startsWith("barcode-") ||
+  layer.id.startsWith("image-");
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -313,7 +320,7 @@ export default function App() {
     if (!isCanvasEditableLayer(layer)) return null;
     const rect = getLayerDisplayRect(layer);
     if (!rect) return null;
-    const handleSize = 14;
+    const handleSize = 24;
     const corners = {
       nw: { x: rect.x, y: rect.y },
       ne: { x: rect.x + rect.width, y: rect.y },
@@ -332,7 +339,7 @@ export default function App() {
 
   const getBaseCropHandleAtPoint = (x: number, y: number) => {
     if (!canvasLayout.width || !canvasLayout.height) return null;
-    const handleSize = 14;
+    const handleSize = 24;
     const corners = {
       nw: { x: 0, y: 0 },
       ne: { x: canvasLayout.width, y: 0 },
@@ -1234,6 +1241,10 @@ export default function App() {
         setIsDragging(Boolean(handle));
         return;
       }
+
+      setDragMoved(false);
+      setIsDragging(false);
+      return;
     }
 
     return;
@@ -1582,6 +1593,20 @@ export default function App() {
     const layer = selectedFile.layers.find(l => l.id === layerId);
     if (!layer) return;
 
+    if (isAddedLayer(layer)) {
+      pushSnapshot();
+      clearRedoStack();
+      setFiles((prev: ManagedFile[]) =>
+        prev.map((f: ManagedFile) =>
+          f.id === selectedFileId
+            ? { ...f, layers: f.layers.filter((l: Layer) => l.id !== layerId) }
+            : f
+        )
+      );
+      if (selectedLayerId === layerId) setSelectedLayerId(null);
+      return;
+    }
+
     // Check if OpenCV is loaded for inpainting
     if (!openCVLoaded) {
       alert("OpenCV is still loading. Please try again in a moment.");
@@ -1770,14 +1795,21 @@ export default function App() {
     }
 
     const dataUrl = generateTestBarcodeDataUrl(barcodeKind, barcodePayload);
+    const defaultSize: Record<BarcodeKind, { width: number; height: number }> = {
+      pdf417: { width: 0.46, height: 0.1 },
+      code128: { width: 0.42, height: 0.055 },
+      upc: { width: 0.42, height: 0.12 },
+      postnet: { width: 0.09, height: 0.52 },
+      imb: { width: 0.09, height: 0.52 },
+    };
     const newLayer: Layer = {
       id: `barcode-${Date.now()}`,
       name: `${barcodeKind.toUpperCase()} Synthetic Test Code`,
       type: "image",
       x: 0.15,
       y: 0.15,
-      width: barcodeKind === "postnet" || barcodeKind === "imb" ? 0.22 : 0.55,
-      height: barcodeKind === "postnet" || barcodeKind === "imb" ? 0.55 : 0.18,
+      width: defaultSize[barcodeKind].width,
+      height: defaultSize[barcodeKind].height,
       visible: true,
       locked: false,
       opacity: 1,
@@ -2744,7 +2776,10 @@ export default function App() {
                     <button 
                       onClick={(e) => { 
                         e.stopPropagation(); 
-                        if (window.confirm(`Delete ${layer.name}? This will remove the component from the image using inpainting.`)) {
+                        const message = isAddedLayer(layer)
+                          ? `Delete ${layer.name}? This will only remove the added layer.`
+                          : `Delete ${layer.name}? This will remove the detected component from the image using inpainting.`;
+                        if (window.confirm(message)) {
                           deleteLayer(layer.id);
                         }
                       }}
